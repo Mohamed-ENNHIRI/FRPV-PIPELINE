@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Panels Viewer</title>
+    <script src="vendor/tailwind.min.js"></script>
+    <script src="vendor/proj4.min.js"></script>
+    <link href="vendor/maplibre/maplibre-gl.css" rel="stylesheet" />
+    <script src="vendor/maplibre/maplibre-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+        .panel {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .stat-box {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .stat-label { color: #94a3b8; font-size: 11px; margin-bottom: 2px; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        #drop-zone.dragover { background-color: rgba(6, 182, 212, 0.15); border-color: #06b6d4; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 3px; }
+        #loading-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        #loading-overlay:not(.hidden) { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(6, 182, 212, 0.3); border-top-color: #06b6d4; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input[type="range"] { -webkit-appearance: none; height: 6px; border-radius: 3px; background: #334155; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #06b6d4; cursor: pointer; }
+        .file-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 9999px; font-size: 11px; font-family: 'JetBrains Mono', monospace; }
+        .file-pill.ok { background: rgba(34,197,94,0.15); color: #4ade80; }
+        .file-pill.miss { background: rgba(148,163,184,0.10); color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <div id="loading-text" class="text-white text-sm">Ready</div>
+    </div>
+
+    <!-- Controls panel (top-left) -->
+    <div id="controls-panel" class="panel absolute top-4 left-4 rounded-xl shadow-2xl p-4 w-80 text-white z-10 hidden">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+                <h1 class="text-sm font-bold text-slate-100">PV Panels Viewer</h1>
+            </div>
+            <div id="dept-pill" class="text-xs text-cyan-300 font-mono bg-cyan-400/10 px-2 py-1 rounded">--</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+            <div class="stat-box"><div class="stat-label">Panels</div><div id="stat-panels" class="stat-value text-cyan-300 font-bold">0</div></div>
+            <div class="stat-box"><div class="stat-label">Buildings</div><div id="stat-buildings" class="stat-value text-slate-200 font-bold">0</div></div>
+            <div class="stat-box"><div class="stat-label">Inclined surface</div><div id="stat-surface" class="stat-value text-cyan-300 font-bold">0 m²</div></div>
+            <div class="stat-box"><div class="stat-label">Mean tilt</div><div id="stat-tilt" class="stat-value text-amber-400 font-bold">--</div></div>
+        </div>
+        <div class="text-xs text-slate-400 mb-2 border-t border-slate-700 pt-2">
+            <div class="font-semibold mb-2 text-slate-300">Color: panel azimuth</div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(0, 80%, 55%)"></div><span>North (0°)</span></div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(90, 80%, 55%)"></div><span>East (90°)</span></div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(180, 80%, 55%)"></div><span>South (180°)</span></div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(270, 80%, 55%)"></div><span>West (270°)</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: #94a3b8"></div><span>No roof match (tilt unknown)</span></div>
+        </div>
+        <div class="text-xs text-slate-400 mb-2 border-t border-slate-700 pt-2">
+            <div class="font-semibold mb-2 text-slate-300">Files loaded</div>
+            <div class="flex flex-wrap gap-2">
+                <span id="pill-geojson" class="file-pill miss">GeoJSON —</span>
+                <span id="pill-csv"     class="file-pill miss">CSV —</span>
+            </div>
+        </div>
+        <div class="mt-3 border-t border-slate-700 pt-3">
+            <label class="text-xs text-slate-400 mb-1 block">Basemap (IGN ortho)</label>
+            <select id="basemap-select" class="w-full bg-slate-800 border border-slate-700 text-slate-200 text-xs rounded px-2 py-1">
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS">Most-recent composite (default)</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS.ORTHO-EXPRESS.2025">Express 2025</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS.ORTHO-EXPRESS.2024">Express 2024</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS.ORTHO-EXPRESS.2023">Express 2023</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2024">Annual 2024</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2023">Annual 2023</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2022">Annual 2022</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2021">Annual 2021</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2020">Annual 2020</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2021-2023">Composite 2021–2023</option>
+                <option value="ORTHOIMAGERY.ORTHOPHOTOS2016-2020">Composite 2016–2020</option>
+            </select>
+            <p id="basemap-hint" class="text-[10px] text-slate-500 mt-1">If the map goes gray, that vintage doesn't cover this area — pick another.</p>
+        </div>
+        <div class="mt-3 border-t border-slate-700 pt-3">
+            <label class="text-xs text-slate-400 mb-1 flex justify-between">
+                <span>Panel opacity</span>
+                <span id="opacity-val" class="text-cyan-300">85%</span>
+            </label>
+            <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.85" class="w-full">
+        </div>
+        <div class="flex gap-2 mt-3">
+            <button id="btn-fit" class="flex-1 bg-slate-700 hover:bg-slate-600 text-xs py-2 px-3 rounded text-slate-200 transition-colors">Fit to data</button>
+            <button id="btn-clear" class="flex-1 bg-red-600/80 hover:bg-red-600 text-xs py-2 px-3 rounded text-white transition-colors">Clear</button>
+        </div>
+    </div>
+
+    <!-- Panel details card (bottom-left) -->
+    <div id="panel-details" class="panel absolute bottom-4 left-4 rounded-xl shadow-2xl p-4 w-96 text-white z-10 hidden">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 3v18"/></svg>
+                <h2 class="text-sm font-bold text-slate-100">Panel Characteristics</h2>
+            </div>
+            <button id="btn-close-panel" class="text-slate-400 hover:text-white text-lg leading-none">&times;</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="stat-box col-span-2">
+                <div class="stat-label">Panel ID</div>
+                <div id="pd-id" class="stat-value text-slate-200 truncate" title="">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Inclined surface</div>
+                <div id="pd-surface" class="stat-value text-cyan-300">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">2D mask area</div>
+                <div id="pd-area2d" class="stat-value text-slate-200">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Tilt</div>
+                <div id="pd-tilt" class="stat-value text-amber-400">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Azimuth</div>
+                <div id="pd-az" class="stat-value text-blue-400">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Confidence</div>
+                <div id="pd-conf" class="stat-value text-emerald-400">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Region match</div>
+                <div id="pd-match" class="stat-value text-slate-300">--</div>
+            </div>
+            <div class="stat-box col-span-2">
+                <div class="stat-label">Building ID</div>
+                <div id="pd-building" class="stat-value text-slate-300 truncate" title="">--</div>
+            </div>
+            <div class="stat-box col-span-2">
+                <div class="stat-label">Region ID / source tile</div>
+                <div id="pd-region" class="stat-value text-slate-300 truncate" title="">--</div>
+            </div>
+            <div class="stat-box col-span-2">
+                <div class="stat-label">Source image</div>
+                <div id="pd-source" class="stat-value text-slate-300 truncate" title="">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Lon</div>
+                <div id="pd-lon" class="stat-value text-slate-300">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Lat</div>
+                <div id="pd-lat" class="stat-value text-slate-300">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drop zone -->
+    <div id="drop-zone" class="absolute inset-0 flex items-center justify-center bg-slate-900/95 z-50 transition-colors duration-300">
+        <div class="panel p-10 rounded-2xl shadow-2xl flex flex-col items-center max-w-lg w-full text-center border-dashed border-2 border-slate-600 hover:border-cyan-500 transition-colors cursor-pointer">
+            <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Drop panel files</h2>
+            <p class="text-slate-400 text-sm mb-2">
+                Drop both <code class="text-slate-200">panels_assigned__&lt;dept&gt;.geojson</code>
+                <span class="text-slate-500">(geometry)</span>
+                and <code class="text-slate-200">panels__&lt;dept&gt;.csv</code>
+                <span class="text-slate-500">(characteristics)</span>.
+            </p>
+            <p class="text-slate-500 text-xs mb-5">Match is by <code>panel_id</code>. CSV is the source of truth — GeoJSON is read for geometry only.</p>
+            <div class="flex gap-2 mb-5 text-xs">
+                <span id="dz-pill-geojson" class="file-pill miss">GeoJSON —</span>
+                <span id="dz-pill-csv"     class="file-pill miss">CSV —</span>
+            </div>
+            <input type="file" id="file-input" class="hidden" multiple accept=".geojson,.json,.csv">
+            <button onclick="document.getElementById('file-input').click()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors">Browse files</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Embed mode: ?embed=1 hides the left-side controls panel ---
+        const EMBED_MODE = new URLSearchParams(location.search).has('embed');
+
+        // --- Projection setup ---
+        proj4.defs('EPSG:2154', '+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+        function lambert93ToWGS84(x, y) { return proj4('EPSG:2154', 'EPSG:4326', [x, y]); }
+
+        // --- Load limits ---
+        const MAX_PER_FILE_MB = 50;          // soft cap; full dept-82 GeoJSON is ~15 MB
+
+        // --- State ---
+        // panelGeoms: array of { panel_id, geometry: {type, coordinates} }  (WGS-84)
+        // panelProps: { [panel_id]: row }   parsed from CSV
+        // panelFiles tracks which input has been seen this batch.
+        let map = null;
+        let panelGeoms = [];
+        let panelProps = {};
+        let panelFiles = { geojson: null, csv: null };
+        let isProcessing = false;
+
+        // --- Tiny CSV parser (handles quoted fields, doubled quotes) ---
+        function parseCsvLine(line) {
+            const out = [];
+            let cur = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const c = line[i];
+                if (c === '"') {
+                    if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    out.push(cur); cur = '';
+                } else {
+                    cur += c;
+                }
+            }
+            out.push(cur);
+            return out;
+        }
+        function parseCsv(text) {
+            const lines = text.split(/\r?\n/);
+            // Skip blank lines (trailing newline is common)
+            let h = 0;
+            while (h < lines.length && lines[h].trim() === '') h++;
+            if (h >= lines.length) return { headers: [], rows: [] };
+            const headers = parseCsvLine(lines[h]);
+            const rows = [];
+            for (let i = h + 1; i < lines.length; i++) {
+                if (lines[i].trim() === '') continue;
+                const fields = parseCsvLine(lines[i]);
+                const row = {};
+                for (let j = 0; j < headers.length; j++) {
+                    row[headers[j]] = fields[j] === undefined ? '' : fields[j];
+                }
+                rows.push(row);
+            }
+            return { headers, rows };
+        }
+
+        // --- Geometry helpers (Lambert-93 → WGS-84) ---
+        function reprojectRing(ring, reproj) { return ring.map(([x, y]) => reproj(x, y)); }
+        function reprojectGeom(g, reproj) {
+            if (!g) return null;
+            if (g.type === 'Polygon') {
+                return { type: 'Polygon', coordinates: g.coordinates.map(r => reprojectRing(r, reproj)) };
+            }
+            if (g.type === 'MultiPolygon') {
+                return { type: 'MultiPolygon', coordinates: g.coordinates.map(p => p.map(r => reprojectRing(r, reproj))) };
+            }
+            return null;
+        }
+        function detectLambert(fc) {
+            const epsg = (fc.crs?.properties?.name || '').toString();
+            if (epsg.includes('2154')) return true;
+            // Inspect the first numeric coordinate; Lambert-93 metres are >> 1000.
+            for (const f of fc.features || []) {
+                if (!f.geometry?.coordinates) continue;
+                const c = flattenFirstCoord(f.geometry.coordinates);
+                if (c) return Math.abs(c[0]) > 200;
+            }
+            return false;
+        }
+        function flattenFirstCoord(coords) {
+            if (!Array.isArray(coords)) return null;
+            if (typeof coords[0] === 'number') return coords;
+            return flattenFirstCoord(coords[0]);
+        }
+        function forEachLonLat(coords, fn) {
+            if (!Array.isArray(coords)) return;
+            if (typeof coords[0] === 'number') { fn(coords[0], coords[1]); return; }
+            for (const c of coords) forEachLonLat(c, fn);
+        }
+
+        // --- Coloring + formatters ---
+        function colorForAzimuth(az) {
+            if (az === null || az === undefined || Number.isNaN(az) || az === '') return '#94a3b8';
+            const a = Number(az);
+            if (!Number.isFinite(a)) return '#94a3b8';
+            return `hsl(${((a % 360) + 360) % 360}, 80%, 55%)`;
+        }
+        function formatSurface(m2) {
+            if (!Number.isFinite(m2) || m2 <= 0) return '0 m²';
+            if (m2 >= 1e6) return (m2 / 1e6).toFixed(2) + ' km²';
+            if (m2 >= 10000) return (m2 / 10000).toFixed(1) + ' ha';
+            if (m2 >= 1000) return (m2 / 1000).toFixed(2) + ' k m²';
+            return Math.round(m2).toLocaleString() + ' m²';
+        }
+        function num(v, d = 1, suf = '') {
+            if (v === null || v === undefined || v === '') return '—';
+            const n = Number(v);
+            return Number.isFinite(n) ? n.toFixed(d) + suf : '—';
+        }
+
+        // --- Basemap config ---
+        // Build the WMTS URL for any IGN ortho LAYER id. The PM tilematrix set is
+        // EPSG:3857; FORMAT=image/jpeg works for every ORTHO layer in this list.
+        function ignWmtsUrl(layerId) {
+            return 'https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0'
+                 + '&LAYER=' + layerId
+                 + '&STYLE=normal&TILEMATRIXSET=PM'
+                 + '&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg';
+        }
+        let currentBasemap = 'ORTHOIMAGERY.ORTHOPHOTOS';
+
+        function setBasemap(layerId) {
+            if (!map) return;
+            currentBasemap = layerId;
+            // Replace the source in place. Place the layer at index 0 so panels
+            // and selection layers stay on top regardless of insertion order.
+            if (map.getLayer('satellite')) map.removeLayer('satellite');
+            if (map.getSource('ign-ortho')) map.removeSource('ign-ortho');
+            map.addSource('ign-ortho', {
+                type: 'raster',
+                tiles: [ignWmtsUrl(layerId)],
+                tileSize: 256,
+                maxzoom: 19,
+                attribution: 'IGN-F/Géoportail (' + layerId + ')'
+            });
+            // Insert under the first non-satellite layer if any exist
+            const layers = map.getStyle().layers || [];
+            const firstNonBase = layers.find(l => l.id !== 'satellite')?.id;
+            map.addLayer({ id: 'satellite', type: 'raster', source: 'ign-ortho', minzoom: 0 }, firstNonBase);
+        }
+
+        // --- Map init ---
+        function initMap() {
+            map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {
+                        'ign-ortho': {
+                            type: 'raster',
+                            tiles: [ignWmtsUrl(currentBasemap)],
+                            tileSize: 256,
+                            maxzoom: 19,
+                            attribution: 'IGN-F/Géoportail'
+                        }
+                    },
+                    layers: [{ id: 'satellite', type: 'raster', source: 'ign-ortho', minzoom: 0 }]
+                },
+                center: [2.5, 46.5],   // metropolitan France default; auto-fits once data loads
+                zoom: 5,
+                minZoom: 4,
+                maxZoom: 20
+            });
+            map.addControl(new maplibregl.NavigationControl(), 'top-right');
+            map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
+
+            map.on('load', () => {
+                map.addSource('panels', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'panels-fill', type: 'fill', source: 'panels',
+                    paint: { 'fill-color': ['get', '_color'], 'fill-opacity': 0.85 }
+                });
+                map.addLayer({
+                    id: 'panels-line', type: 'line', source: 'panels',
+                    paint: { 'line-color': '#0e7490', 'line-width': 1, 'line-opacity': 0.95 }
+                });
+
+                map.addSource('panel-selected', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'panel-selected-line', type: 'line', source: 'panel-selected',
+                    paint: { 'line-color': '#f59e0b', 'line-width': 3, 'line-opacity': 1 }
+                });
+
+                function onPanelClick(e) {
+                    if (!e.features || e.features.length === 0) return;
+                    e.originalEvent.stopPropagation();
+                    const f = e.features[0];
+                    showPanelDetails(f.properties);
+                    map.getSource('panel-selected').setData({
+                        type: 'FeatureCollection',
+                        features: [{ type: 'Feature', geometry: f.geometry, properties: f.properties }]
+                    });
+                }
+                map.on('click', 'panels-fill', onPanelClick);
+                map.on('click', 'panels-line', onPanelClick);
+                map.on('click', (e) => {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['panels-fill', 'panels-line'] });
+                    if (features.length === 0) {
+                        document.getElementById('panel-details').classList.add('hidden');
+                        map.getSource('panel-selected').setData({ type: 'FeatureCollection', features: [] });
+                    }
+                });
+                map.on('mouseenter', 'panels-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', 'panels-fill', () => { map.getCanvas().style.cursor = ''; });
+                map.on('mouseenter', 'panels-line', () => { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', 'panels-line', () => { map.getCanvas().style.cursor = ''; });
+            });
+        }
+
+        function showPanelDetails(p) {
+            document.getElementById('pd-id').textContent = p.panel_id ?? '--';
+            document.getElementById('pd-id').title = p.panel_id ?? '';
+            document.getElementById('pd-surface').textContent = num(p.surface_m2, 1, ' m²');
+            document.getElementById('pd-area2d').textContent = num(p.panel_2d_area_m2, 1, ' m²');
+            document.getElementById('pd-tilt').textContent = num(p.tilt_degrees, 1, '°');
+            document.getElementById('pd-az').textContent = num(p.azimuth_degrees, 1, '°');
+            document.getElementById('pd-conf').textContent = num(p.confidence, 3);
+            const linkM = p.building_link_method || '—';
+            const matchM = p.region_match_method || '—';
+            document.getElementById('pd-match').textContent = `${matchM} (${linkM})`;
+            document.getElementById('pd-building').textContent = p.building_id || '—';
+            document.getElementById('pd-building').title = p.building_id || '';
+            const reg = p.region_id ? `${p.region_id} / tile ${p.source_tile || '?'}` : '—';
+            document.getElementById('pd-region').textContent = reg;
+            document.getElementById('pd-region').title = reg;
+            document.getElementById('pd-source').textContent = p.source_image || '—';
+            document.getElementById('pd-source').title = p.source_image || '';
+            document.getElementById('pd-lon').textContent = num(p.lon, 5);
+            document.getElementById('pd-lat').textContent = num(p.lat, 5);
+            document.getElementById('panel-details').classList.remove('hidden');
+        }
+
+        // --- File handling ---
+        async function handleFiles(files) {
+            if (isProcessing || !files || files.length === 0) return;
+            const list = Array.from(files);
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+
+            for (const f of list) {
+                if (f.size > MAX_PER_FILE_MB * 1024 * 1024) {
+                    alert(`${f.name} is ${(f.size/1048576).toFixed(1)} MB — exceeds the ${MAX_PER_FILE_MB} MB cap.`);
+                    return;
+                }
+            }
+
+            isProcessing = true;
+            overlay.classList.remove('hidden');
+
+            for (const f of list) {
+                const ext = (f.name.split('.').pop() || '').toLowerCase();
+                if (ext === 'csv') {
+                    loadingText.textContent = `Reading ${f.name} (CSV)...`;
+                    panelFiles.csv = await readCsv(f);
+                    setPill('csv', f.name, panelFiles.csv.rows.length + ' rows');
+                } else if (ext === 'geojson' || ext === 'json') {
+                    loadingText.textContent = `Reading ${f.name} (GeoJSON)...`;
+                    panelFiles.geojson = await readGeojson(f);
+                    setPill('geojson', f.name, panelFiles.geojson.length + ' geoms');
+                } else {
+                    console.warn('Skipping unsupported file:', f.name);
+                }
+            }
+
+            if (panelFiles.geojson && panelFiles.csv) {
+                loadingText.textContent = 'Joining GeoJSON ↔ CSV by panel_id...';
+                await new Promise(r => setTimeout(r, 0));
+                renderPanels();
+            }
+            overlay.classList.add('hidden');
+            isProcessing = false;
+        }
+
+        async function readCsv(file) {
+            const text = await file.text();
+            const { headers, rows } = parseCsv(text);
+            const props = {};
+            for (const r of rows) {
+                if (!r.panel_id) continue;
+                // Type-cast numeric fields once so the details card and color expression
+                // don't have to .Number() everything.
+                const numFields = ['lon','lat','panel_2d_area_m2','surface_m2','tilt_degrees','azimuth_degrees','confidence'];
+                for (const k of numFields) {
+                    if (r[k] === undefined) continue;
+                    if (r[k] === '' || r[k] === null) { r[k] = null; continue; }
+                    const n = Number(r[k]);
+                    r[k] = Number.isFinite(n) ? n : null;
+                }
+                props[r.panel_id] = r;
+            }
+            panelProps = props;
+            return { headers, rows };
+        }
+
+        async function readGeojson(file) {
+            const text = await file.text();
+            const fc = JSON.parse(text);
+            if (fc.type !== 'FeatureCollection' || !Array.isArray(fc.features)) {
+                alert('Not a FeatureCollection: ' + file.name);
+                return [];
+            }
+            const isLambert = detectLambert(fc);
+            const reproj = isLambert ? lambert93ToWGS84 : (x, y) => [x, y];
+            const out = [];
+            for (const f of fc.features) {
+                const pid = f.properties?.panel_id;
+                if (!pid) continue;
+                const geom = reprojectGeom(f.geometry, reproj);
+                if (!geom) continue;
+                out.push({ panel_id: pid, geometry: geom });
+            }
+            panelGeoms = out;
+            console.info('GeoJSON CRS:', isLambert ? 'EPSG:2154 (reprojected)' : 'WGS-84 (passthrough)');
+            return out;
+        }
+
+        function setPill(which, name, info) {
+            const dz = document.getElementById('dz-pill-' + which);
+            const cp = document.getElementById('pill-' + which);
+            const label = which === 'csv' ? 'CSV' : 'GeoJSON';
+            dz.classList.remove('miss'); dz.classList.add('ok');
+            cp.classList.remove('miss'); cp.classList.add('ok');
+            dz.textContent = `${label}: ${name}  (${info})`;
+            cp.textContent = `${label}: ${name}  (${info})`;
+        }
+
+        // --- Join geoms with CSV-derived properties and push to map ---
+        function renderPanels() {
+            const features = [];
+            let buildings = new Set();
+            let totalSurface = 0;
+            let tiltSum = 0, tiltN = 0;
+            let unmatched = 0;
+
+            for (const g of panelGeoms) {
+                const p = panelProps[g.panel_id];
+                if (!p) { unmatched++; continue; }
+                const props = { ...p, _color: colorForAzimuth(p.azimuth_degrees) };
+                features.push({ type: 'Feature', geometry: g.geometry, properties: props });
+
+                if (p.building_id) buildings.add(p.building_id);
+                if (Number.isFinite(p.surface_m2)) totalSurface += p.surface_m2;
+                if (Number.isFinite(p.tilt_degrees)) { tiltSum += p.tilt_degrees; tiltN++; }
+            }
+
+            if (unmatched > 0) {
+                console.warn(`${unmatched} GeoJSON panel(s) had no CSV row — dropped.`);
+            }
+
+            // Detect dept from CSV (all rows share a value)
+            const sampleRow = features.length > 0 ? features[0].properties : null;
+            document.getElementById('dept-pill').textContent = sampleRow?.dept ? 'dept ' + sampleRow.dept : `${features.length} panels`;
+
+            document.getElementById('stat-panels').textContent = features.length.toLocaleString();
+            document.getElementById('stat-buildings').textContent = buildings.size.toLocaleString();
+            document.getElementById('stat-surface').textContent = formatSurface(totalSurface);
+            document.getElementById('stat-tilt').textContent = tiltN > 0 ? (tiltSum / tiltN).toFixed(1) + '°' : '—';
+
+            if (map && map.getSource('panels')) {
+                map.getSource('panels').setData({ type: 'FeatureCollection', features });
+                setTimeout(() => fitToData(), 200);
+            }
+
+            document.getElementById('drop-zone').classList.add('hidden');
+            if (!EMBED_MODE) {
+                document.getElementById('controls-panel').classList.remove('hidden');
+            }
+        }
+
+        function fitToData() {
+            if (!map || panelGeoms.length === 0) return;
+            let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+            for (const g of panelGeoms) {
+                forEachLonLat(g.geometry?.coordinates, (lon, lat) => {
+                    if (lon < minLon) minLon = lon; if (lon > maxLon) maxLon = lon;
+                    if (lat < minLat) minLat = lat; if (lat > maxLat) maxLat = lat;
+                });
+            }
+            if (Number.isFinite(minLon)) {
+                map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 50, duration: 1000 });
+            }
+        }
+
+        function clearAll() {
+            panelGeoms = [];
+            panelProps = {};
+            panelFiles = { geojson: null, csv: null };
+            const empty = { type: 'FeatureCollection', features: [] };
+            if (map) {
+                if (map.getSource('panels'))         map.getSource('panels').setData(empty);
+                if (map.getSource('panel-selected')) map.getSource('panel-selected').setData(empty);
+            }
+            for (const w of ['geojson', 'csv']) {
+                const dz = document.getElementById('dz-pill-' + w);
+                const cp = document.getElementById('pill-' + w);
+                const label = w === 'csv' ? 'CSV' : 'GeoJSON';
+                dz.classList.add('miss'); dz.classList.remove('ok');
+                cp.classList.add('miss'); cp.classList.remove('ok');
+                dz.textContent = `${label} —`;
+                cp.textContent = `${label} —`;
+            }
+            document.getElementById('stat-panels').textContent = '0';
+            document.getElementById('stat-buildings').textContent = '0';
+            document.getElementById('stat-surface').textContent = '0 m²';
+            document.getElementById('stat-tilt').textContent = '--';
+            document.getElementById('dept-pill').textContent = '--';
+            document.getElementById('panel-details').classList.add('hidden');
+            document.getElementById('controls-panel').classList.add('hidden');
+            document.getElementById('drop-zone').classList.remove('hidden');
+        }
+
+        // --- Wire up ---
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            if (e.target.files.length) handleFiles(e.target.files);
+        });
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+        });
+
+        document.getElementById('btn-fit').addEventListener('click', fitToData);
+        document.getElementById('btn-clear').addEventListener('click', clearAll);
+        document.getElementById('btn-close-panel').addEventListener('click', () => {
+            document.getElementById('panel-details').classList.add('hidden');
+            if (map && map.getSource('panel-selected')) {
+                map.getSource('panel-selected').setData({ type: 'FeatureCollection', features: [] });
+            }
+        });
+        document.getElementById('opacity-slider').addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            document.getElementById('opacity-val').textContent = Math.round(v * 100) + '%';
+            if (map && map.getLayer('panels-fill')) {
+                map.setPaintProperty('panels-fill', 'fill-opacity', v);
+            }
+        });
+        document.getElementById('basemap-select').addEventListener('change', (e) => {
+            setBasemap(e.target.value);
+        });
+
+        initMap();
+
+        // --- Auto-load bundled dépt-82 panel data --------------------
+        async function autoLoadPanels(){
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            try{
+                overlay.classList.remove('hidden');
+                loadingText.textContent = 'Fetching panels__82.geojson + panels__82.csv ...';
+                const [g, c] = await Promise.all([
+                    fetch('data/panels__82.geojson'),
+                    fetch('data/panels__82.csv')
+                ]);
+                if(!g.ok || !c.ok){
+                    loadingText.textContent = 'Bundled data missing — drop files in.';
+                    return;
+                }
+                const [gBlob, cBlob] = await Promise.all([g.blob(), c.blob()]);
+                const files = [
+                    new File([gBlob], 'panels__82.geojson', { type:'application/geo+json' }),
+                    new File([cBlob], 'panels__82.csv',     { type:'text/csv' })
+                ];
+                document.getElementById('drop-zone').classList.add('hidden');
+                handleFiles(files);
+            } catch(err){
+                console.error('autoLoadPanels error', err);
+                overlay.classList.add('hidden');
+            }
+        }
+        autoLoadPanels();
+    </script>
+</body>
+</html>

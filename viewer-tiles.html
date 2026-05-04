@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PV Roof Map Viewer</title>
+    <script src="vendor/tailwind.min.js"></script>
+    <script src="vendor/proj4.min.js"></script>
+    <link href="vendor/maplibre/maplibre-gl.css" rel="stylesheet" />
+    <script src="vendor/maplibre/maplibre-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Inter', system-ui, sans-serif; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; height: 100%; }
+        .panel {
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .stat-box {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(51, 65, 85, 0.5);
+            padding: 8px;
+            border-radius: 6px;
+        }
+        .stat-label { color: #94a3b8; font-size: 11px; margin-bottom: 2px; }
+        .stat-value { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+        #drop-zone.dragover { background-color: rgba(52, 211, 153, 0.15); border-color: #34d399; }
+        .legend-item { display: flex; align-items: center; gap: 8px; }
+        .legend-color { width: 16px; height: 16px; border-radius: 3px; }
+        #loading-overlay { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
+        #loading-overlay:not(.hidden) { display: flex; }
+        .spinner { width: 40px; height: 40px; border: 3px solid rgba(52, 211, 153, 0.3); border-top-color: #34d399; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        input[type="range"] { -webkit-appearance: none; height: 6px; border-radius: 3px; background: #334155; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #34d399; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden">
+        <div class="spinner"></div>
+        <div id="loading-text" class="text-white text-sm">Ready</div>
+    </div>
+
+    <!-- Controls panel (top-left) -->
+    <div id="controls-panel" class="panel absolute top-4 left-4 rounded-xl shadow-2xl p-4 w-80 text-white z-10 hidden">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                <h1 class="text-sm font-bold text-slate-100">PV Roof Map Viewer</h1>
+            </div>
+            <div id="stat-file" class="text-xs text-emerald-400 font-mono bg-emerald-400/10 px-2 py-1 rounded">0 files</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs mb-3">
+            <div class="stat-box"><div class="stat-label">Regions</div><div id="stat-regions" class="stat-value text-slate-200 font-bold">0</div></div>
+            <div class="stat-box"><div class="stat-label">Files</div><div id="stat-files" class="stat-value text-slate-200 font-bold">0</div></div>
+        </div>
+        <div class="text-xs text-slate-400 mb-2 border-t border-slate-700 pt-2">
+            <div class="font-semibold mb-2 text-slate-300">Roof Azimuth</div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(0, 80%, 55%)"></div><span>North (0°)</span></div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(90, 80%, 55%)"></div><span>East (90°)</span></div>
+            <div class="legend-item mb-1"><div class="legend-color" style="background: hsl(180, 80%, 55%)"></div><span>South (180°)</span></div>
+            <div class="legend-item"><div class="legend-color" style="background: hsl(270, 80%, 55%)"></div><span>West (270°)</span></div>
+        </div>
+        <div class="text-xs text-slate-400 mb-2 border-t border-slate-700 pt-2">
+            <div class="font-semibold mb-2 text-slate-300">Study Zone</div>
+            <div class="legend-item mb-1">
+                <div class="legend-color" style="background: transparent; border: 2px dashed #fbbf24;"></div>
+                <span>Download bbox (requested)</span>
+            </div>
+            <div class="legend-item mb-1">
+                <div class="legend-color" style="background: rgba(255,255,255,0.12); border: 1px solid #cbd5e1;"></div>
+                <span>Tile footprints (processed)</span>
+            </div>
+            <div class="legend-item mb-1">
+                <div class="legend-color" style="background: transparent; border: 2px solid #22d3ee;"></div>
+                <span>Processed envelope</span>
+            </div>
+            <label class="flex items-center gap-2 mt-2 cursor-pointer select-none">
+                <input type="checkbox" id="bbox-toggle" checked class="accent-amber-400">
+                <span class="text-slate-300">Show download bbox</span>
+            </label>
+            <label class="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                <input type="checkbox" id="footprints-toggle" checked class="accent-slate-300">
+                <span class="text-slate-300">Show tile footprints</span>
+            </label>
+            <label class="flex items-center gap-2 mt-1 cursor-pointer select-none">
+                <input type="checkbox" id="envelope-toggle" checked class="accent-cyan-400">
+                <span class="text-slate-300">Show processed envelope</span>
+            </label>
+            <label class="flex items-center gap-2 mt-1 cursor-pointer select-none" title="Hides roofs whose centroid falls outside the download bbox">
+                <input type="checkbox" id="clip-toggle" class="accent-amber-400">
+                <span class="text-slate-300">Clip roofs to bbox</span>
+            </label>
+        </div>
+        <div class="mt-3 border-t border-slate-700 pt-3">
+            <label class="text-xs text-slate-400 mb-1 flex justify-between">
+                <span>Layer Opacity</span>
+                <span id="opacity-val" class="text-emerald-400">65%</span>
+            </label>
+            <input type="range" id="opacity-slider" min="0" max="1" step="0.05" value="0.65" class="w-full">
+        </div>
+        <div class="flex gap-2 mt-3">
+            <button id="btn-fit" class="flex-1 bg-slate-700 hover:bg-slate-600 text-xs py-2 px-3 rounded text-slate-200 transition-colors">Fit to Data</button>
+            <button id="btn-fit-bbox" class="flex-1 bg-amber-600/80 hover:bg-amber-600 text-xs py-2 px-3 rounded text-white transition-colors">Fit to BBox</button>
+            <button id="btn-clear" class="flex-1 bg-red-600/80 hover:bg-red-600 text-xs py-2 px-3 rounded text-white transition-colors">Clear</button>
+        </div>
+    </div>
+
+    <!-- Region details panel (bottom-left) — shown on click -->
+    <div id="details-panel" class="panel absolute bottom-4 left-4 rounded-xl shadow-2xl p-4 w-80 text-white z-10 hidden">
+        <div class="flex items-center justify-between border-b border-slate-700 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <h2 class="text-sm font-bold text-slate-100">Region Details</h2>
+            </div>
+            <button id="btn-close-details" class="text-slate-400 hover:text-white text-lg leading-none">&times;</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+            <div class="stat-box">
+                <div class="stat-label">Region ID</div>
+                <div id="det-id" class="stat-value text-slate-200">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Area</div>
+                <div id="det-area" class="stat-value text-emerald-400">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Tilt</div>
+                <div id="det-tilt" class="stat-value text-amber-400">--</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Azimuth</div>
+                <div id="det-azimuth" class="stat-value text-blue-400">--</div>
+            </div>
+            <div class="col-span-2 stat-box">
+                <div class="stat-label">Source File</div>
+                <div id="det-source" class="stat-value text-slate-300 truncate" title="">--</div>
+            </div>
+            <div class="col-span-2 stat-box">
+                <div class="stat-label">Building IDs</div>
+                <div id="det-buildings" class="stat-value text-slate-300">--</div>
+            </div>
+            <div class="col-span-2 stat-box">
+                <div class="stat-label">PV Scores</div>
+                <div id="det-scores" class="stat-value text-slate-300">--</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- File drop zone -->
+    <div id="drop-zone" class="absolute inset-0 flex items-center justify-center bg-slate-900/95 z-50 transition-colors duration-300">
+        <div class="panel p-10 rounded-2xl shadow-2xl flex flex-col items-center max-w-md w-full text-center border-dashed border-2 border-slate-600 hover:border-emerald-500 transition-colors cursor-pointer">
+            <div class="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center mb-6">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <h2 class="text-xl font-bold text-white mb-2">Drop PV JSON Files</h2>
+            <p class="text-slate-400 text-sm mb-6">Select roof segmentation JSON files to visualize on map with IGN satellite background.</p>
+            <input type="file" id="file-input" class="hidden" multiple accept=".json">
+            <button onclick="document.getElementById('file-input').click()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 px-6 rounded-lg shadow transition-colors">Browse Files</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Embed mode: ?embed=1 hides the left-side controls panel ---
+        // and replaces it with a single floating toggle button so the
+        // map fills the iframe.  See index.html slide 6.
+        const EMBED_MODE = new URLSearchParams(location.search).has('embed');
+
+        // --- Load limits (guard rails to keep the browser responsive) ---
+        const MAX_FILES = 500;          // hard cap on file count per batch
+        const MAX_TOTAL_MB = 250;       // hard cap on cumulative batch size
+        const MAX_PER_FILE_MB = 25;     // any single file above this is skipped
+
+        // --- Projection setup ---
+        proj4.defs('EPSG:2154', '+proj=lcc +lat_1=49 +lat_2=44 +lat_0=46.5 +lon_0=3 +x_0=700000 +y_0=6600000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs');
+        function lambert93ToWGS84(x, y) { return proj4('EPSG:2154', 'EPSG:4326', [x, y]); }
+
+        // --- State ---
+        let map = null;
+        let allRegionsData = [];
+        let fileInfos = []; // [{ source_file, center }]
+        let isProcessing = false;
+
+        // --- IGN LiDAR HD tile = 1 km × 1 km in Lambert93, aligned to integer-km grid.
+        // Filename convention: LHD_FXX_XXXX_YYYY_*  → tile origin = (XXXX*1000, YYYY*1000),
+        // tile spans X=[XXXX*1000, XXXX*1000+1000], Y=[YYYY*1000-1000, YYYY*1000].
+        function tileFootprintLambert93(sourceFile, center) {
+            const m = (sourceFile || '').match(/_(\d{4})_(\d{4})_/);
+            if (m) {
+                const x0 = parseInt(m[1], 10) * 1000;
+                const y1 = parseInt(m[2], 10) * 1000;
+                return { minX: x0, maxX: x0 + 1000, minY: y1 - 1000, maxY: y1 };
+            }
+            // Fallback: snap center to integer-km grid (NW-corner-ceiling on Y)
+            if (center && center.length >= 2) {
+                const x0 = Math.floor(center[0] / 1000) * 1000;
+                const y1 = Math.ceil(center[1] / 1000) * 1000;
+                return { minX: x0, maxX: x0 + 1000, minY: y1 - 1000, maxY: y1 };
+            }
+            return null;
+        }
+
+        // --- LiDAR download bounding box (Grand Chambéry, EPSG:4326) ---
+        // Source: downloader_chambery.py — BBOX_CHAMBERY = "45.491,5.814,45.764,6.259"
+        const STUDY_BBOX = { minLat: 45.491, minLon: 5.814, maxLat: 45.764, maxLon: 6.259 };
+        const STUDY_BBOX_GEOJSON = {
+            type: 'FeatureCollection',
+            features: [{
+                type: 'Feature',
+                properties: { name: 'Grand Chambéry — LiDAR download zone' },
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                        [STUDY_BBOX.minLon, STUDY_BBOX.minLat],
+                        [STUDY_BBOX.maxLon, STUDY_BBOX.minLat],
+                        [STUDY_BBOX.maxLon, STUDY_BBOX.maxLat],
+                        [STUDY_BBOX.minLon, STUDY_BBOX.maxLat],
+                        [STUDY_BBOX.minLon, STUDY_BBOX.minLat]
+                    ]]
+                }
+            }]
+        };
+
+        // --- Helper: safely parse a property that MapLibre may have serialized as a JSON string ---
+        function safeParseProp(val) {
+            if (Array.isArray(val)) return val;
+            if (typeof val === 'string') {
+                try { return JSON.parse(val); } catch (e) { return []; }
+            }
+            return [];
+        }
+
+        // --- Map init ---
+        function initMap() {
+            map = new maplibregl.Map({
+                container: 'map',
+                style: {
+                    version: 8,
+                    sources: {
+                        'ign-ortho': {
+                            type: 'raster',
+                            tiles: ['https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=ORTHOIMAGERY.ORTHOPHOTOS&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image/jpeg'],
+                            tileSize: 256,
+                            // IGN serves orthophoto tiles up to z=19 for this area; z>=20 returns "No data found".
+                            // MapLibre will overzoom (scale up z=19 tiles) for camera zoom > 19.
+                            maxzoom: 19,
+                            attribution: 'IGN-F/Géoportail'
+                        }
+                    },
+                    // No layer-level maxzoom — `layer.maxzoom` is *exclusive* in MapLibre, so setting it
+                    // would hide the satellite at the map's max zoom and leave a blank white canvas.
+                    layers: [{
+                        id: 'satellite',
+                        type: 'raster',
+                        source: 'ign-ortho',
+                        minzoom: 0
+                    }]
+                },
+                center: [5.92, 45.57],
+                zoom: 12,
+                minZoom: 5,
+                maxZoom: 20
+            });
+
+            map.addControl(new maplibregl.NavigationControl(), 'top-right');
+            map.addControl(new maplibregl.ScaleControl(), 'bottom-right');
+
+            map.on('load', () => {
+                // Study-zone bounding box (LiDAR download extent)
+                map.addSource('study-bbox', { type: 'geojson', data: STUDY_BBOX_GEOJSON });
+                map.addLayer({
+                    id: 'study-bbox-fill', type: 'fill', source: 'study-bbox',
+                    paint: { 'fill-color': '#fbbf24', 'fill-opacity': 0.05 }
+                });
+                map.addLayer({
+                    id: 'study-bbox-line', type: 'line', source: 'study-bbox',
+                    paint: {
+                        'line-color': '#fbbf24',
+                        'line-width': 2.5,
+                        'line-dasharray': [3, 2],
+                        'line-opacity': 0.95
+                    }
+                });
+
+                // Per-tile footprints (1 km × 1 km, one per loaded JSON)
+                map.addSource('tile-footprints', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'tile-footprints-fill', type: 'fill', source: 'tile-footprints',
+                    paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.08 }
+                });
+                map.addLayer({
+                    id: 'tile-footprints-line', type: 'line', source: 'tile-footprints',
+                    paint: { 'line-color': '#cbd5e1', 'line-width': 1, 'line-opacity': 0.6 }
+                });
+
+                // Processed envelope (bbox of the union of tile footprints)
+                map.addSource('processed-envelope', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'processed-envelope-line', type: 'line', source: 'processed-envelope',
+                    paint: { 'line-color': '#22d3ee', 'line-width': 2, 'line-opacity': 0.9 }
+                });
+
+                // Main data layers
+                map.addSource('roof-regions', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'roof-regions-fill', type: 'fill', source: 'roof-regions',
+                    paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.65 }
+                });
+                map.addLayer({
+                    id: 'roof-regions-line', type: 'line', source: 'roof-regions',
+                    paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': 0.9 }
+                });
+
+                // Selection highlight layer
+                map.addSource('roof-selected', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+                map.addLayer({
+                    id: 'roof-selected-fill', type: 'fill', source: 'roof-selected',
+                    paint: { 'fill-color': '#34d399', 'fill-opacity': 0.35 }
+                });
+                map.addLayer({
+                    id: 'roof-selected-line', type: 'line', source: 'roof-selected',
+                    paint: { 'line-color': '#10b981', 'line-width': 3, 'line-opacity': 1 }
+                });
+
+                // Click handler (on both fill and line so clicks always register)
+                function onRegionClick(e) {
+                    if (!e.features || e.features.length === 0) return;
+                    e.originalEvent.stopPropagation(); // prevent the map click from clearing
+                    const feature = e.features[0];
+                    const props = feature.properties;
+                    showDetails(props);
+                    // Highlight clicked region by finding all triangles with same region_id
+                    const regionId = props.region_id;
+                    const src = map.getSource('roof-regions');
+                    if (src && src._data) {
+                        const allFeatures = src._data.features.filter(f => String(f.properties.region_id) === String(regionId));
+                        map.getSource('roof-selected').setData({ type: 'FeatureCollection', features: allFeatures });
+                    } else {
+                        map.getSource('roof-selected').setData({ type: 'FeatureCollection', features: [feature] });
+                    }
+                }
+                map.on('click', 'roof-regions-fill', onRegionClick);
+                map.on('click', 'roof-regions-line', onRegionClick);
+
+                // Clear selection when clicking empty map
+                map.on('click', (e) => {
+                    const features = map.queryRenderedFeatures(e.point, { layers: ['roof-regions-fill', 'roof-regions-line'] });
+                    if (features.length === 0) {
+                        document.getElementById('details-panel').classList.add('hidden');
+                        map.getSource('roof-selected').setData({ type: 'FeatureCollection', features: [] });
+                    }
+                });
+
+                // Cursor change
+                map.on('mouseenter', 'roof-regions-fill', () => { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', 'roof-regions-fill', () => { map.getCanvas().style.cursor = ''; });
+                map.on('mouseenter', 'roof-regions-line', () => { map.getCanvas().style.cursor = 'pointer'; });
+                map.on('mouseleave', 'roof-regions-line', () => { map.getCanvas().style.cursor = ''; });
+            });
+        }
+
+        // --- Show region details in the panel ---
+        function showDetails(props) {
+            document.getElementById('det-id').textContent = props.region_id ?? '--';
+            document.getElementById('det-area').textContent = Number(props.true_area_sqm || 0).toFixed(1) + ' m²';
+            document.getElementById('det-tilt').textContent = Number(props.tilt_degrees || 0).toFixed(1) + '°';
+            document.getElementById('det-azimuth').textContent = Number(props.azimuth_degrees || 0).toFixed(1) + '°';
+
+            const src = props.source_file || '--';
+            document.getElementById('det-source').textContent = src;
+            document.getElementById('det-source').title = src;
+
+            const buildingIds = safeParseProp(props.building_ids);
+            document.getElementById('det-buildings').textContent = buildingIds.length > 0 ? buildingIds.join(', ') : '--';
+
+            const pvScores = safeParseProp(props.pv_scores);
+            document.getElementById('det-scores').textContent = pvScores.length > 0
+                ? pvScores.map(s => Number(s).toFixed(4)).join(', ')
+                : '--';
+
+            document.getElementById('details-panel').classList.remove('hidden');
+        }
+
+        // --- Build per-tile footprints + processed envelope from loaded files ---
+        function updateStudyZoneOverlays() {
+            if (!map) return;
+            const seen = new Set();
+            const features = [];
+            let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+
+            for (const fi of fileInfos) {
+                const t = tileFootprintLambert93(fi.source_file, fi.center);
+                if (!t) continue;
+                const key = `${t.minX}_${t.maxY}`;
+                if (seen.has(key)) continue;
+                seen.add(key);
+                const corners = [
+                    lambert93ToWGS84(t.minX, t.maxY),
+                    lambert93ToWGS84(t.maxX, t.maxY),
+                    lambert93ToWGS84(t.maxX, t.minY),
+                    lambert93ToWGS84(t.minX, t.minY)
+                ];
+                for (const [lon, lat] of corners) {
+                    if (lon < minLon) minLon = lon;
+                    if (lon > maxLon) maxLon = lon;
+                    if (lat < minLat) minLat = lat;
+                    if (lat > maxLat) maxLat = lat;
+                }
+                corners.push(corners[0]);
+                features.push({
+                    type: 'Feature',
+                    properties: { source_file: fi.source_file, tile_key: key },
+                    geometry: { type: 'Polygon', coordinates: [corners] }
+                });
+            }
+
+            const footprintsSrc = map.getSource('tile-footprints');
+            if (footprintsSrc) footprintsSrc.setData({ type: 'FeatureCollection', features });
+
+            const envelopeSrc = map.getSource('processed-envelope');
+            if (envelopeSrc) {
+                if (features.length === 0) {
+                    envelopeSrc.setData({ type: 'FeatureCollection', features: [] });
+                } else {
+                    envelopeSrc.setData({
+                        type: 'FeatureCollection',
+                        features: [{
+                            type: 'Feature',
+                            properties: {},
+                            geometry: {
+                                type: 'Polygon',
+                                coordinates: [[
+                                    [minLon, minLat], [maxLon, minLat],
+                                    [maxLon, maxLat], [minLon, maxLat],
+                                    [minLon, minLat]
+                                ]]
+                            }
+                        }]
+                    });
+                }
+            }
+        }
+
+        // --- Apply or clear the clip-to-bbox filter on roof layers ---
+        function applyClipFilter() {
+            if (!map) return;
+            const on = document.getElementById('clip-toggle')?.checked;
+            const filter = on ? ['all',
+                ['>=', ['get', 'centroid_lon'], STUDY_BBOX.minLon],
+                ['<=', ['get', 'centroid_lon'], STUDY_BBOX.maxLon],
+                ['>=', ['get', 'centroid_lat'], STUDY_BBOX.minLat],
+                ['<=', ['get', 'centroid_lat'], STUDY_BBOX.maxLat]
+            ] : null;
+            if (map.getLayer('roof-regions-fill')) map.setFilter('roof-regions-fill', filter);
+            if (map.getLayer('roof-regions-line')) map.setFilter('roof-regions-line', filter);
+            if (map.getLayer('roof-selected-fill')) map.setFilter('roof-selected-fill', filter);
+            if (map.getLayer('roof-selected-line')) map.setFilter('roof-selected-line', filter);
+        }
+
+        // --- Process uploaded JSON files ---
+        async function processJsonFiles(files) {
+            if (isProcessing || !files || files.length === 0) return;
+
+            // --- Guard rails: filter oversize files and cap batch ---
+            const all = Array.from(files).filter(f => /\.json$/i.test(f.name));
+            if (!all.length) { alert('No .json files in selection.'); return; }
+            const perFileCap = MAX_PER_FILE_MB * 1024 * 1024;
+            const totalCap = MAX_TOTAL_MB * 1024 * 1024;
+            const oversize = all.filter(f => f.size > perFileCap);
+            let pool = all.filter(f => f.size <= perFileCap);
+            if (oversize.length) {
+                console.warn('Skipping ' + oversize.length + ' file(s) over ' + MAX_PER_FILE_MB + ' MB:',
+                    oversize.map(f => f.name + ' (' + (f.size/1048576).toFixed(1) + ' MB)'));
+            }
+            if (pool.length > MAX_FILES) {
+                if (!confirm('You selected ' + all.length + ' files. The viewer will load only the first '
+                    + MAX_FILES + ' to stay responsive. Continue?')) return;
+                pool = pool.slice(0, MAX_FILES);
+            }
+            const accepted = [];
+            let totalBytes = 0;
+            for (const f of pool) {
+                if (totalBytes + f.size > totalCap) break;
+                accepted.push(f); totalBytes += f.size;
+            }
+            if (accepted.length < pool.length) {
+                if (!confirm('Loading ' + accepted.length + ' of ' + all.length + ' files ('
+                    + (totalBytes/1048576).toFixed(0) + ' MB; total cap is ' + MAX_TOTAL_MB + ' MB). Continue?')) return;
+            }
+            if (!accepted.length) { alert('Nothing to load (all files were oversized or skipped).'); return; }
+            files = accepted;
+
+            isProcessing = true;
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            overlay.classList.remove('hidden');
+            loadingText.textContent = 'Reading ' + files.length + ' files ('
+                + (totalBytes/1048576).toFixed(0) + ' MB)...';
+
+            document.getElementById('drop-zone').classList.add('hidden');
+            if (!EMBED_MODE) {
+                document.getElementById('controls-panel').classList.remove('hidden');
+            }
+
+            allRegionsData = [];
+            fileInfos = [];
+
+            // Read all files in parallel
+            const fileReadPromises = Array.from(files).map(async (file) => {
+                try {
+                    const text = await file.text();
+                    const jsonData = JSON.parse(text);
+                    if (!jsonData.roof_regions) return;
+                    const fileCenter = jsonData.file_geolocation?.center || [0, 0, 0];
+                    const sourceFile = jsonData.source_file || file.name;
+                    // Detect coord CRS of geometry: WGS-84 lon/lat (new pipeline, stage1_run.py)
+                    // vs Lambert-93 metres relative to fileCenter (older standalone runs).
+                    const isWGS84 = jsonData.file_geolocation?.crs === 'EPSG:4326'
+                        || !!jsonData.file_geolocation?.wgs_center;
+                    fileInfos.push({ source_file: sourceFile, center: fileCenter });
+                    for (const r of jsonData.roof_regions) {
+                        r.source_file = sourceFile;
+                        r.fileCenter = fileCenter;
+                        r.isWGS84 = isWGS84;
+                        allRegionsData.push(r);
+                    }
+                } catch (e) { console.warn('Skipping invalid JSON:', file.name, e); }
+            });
+            await Promise.all(fileReadPromises);
+            const totalRegions = allRegionsData.length;
+
+            // Build per-tile footprints (deduped) and processed envelope
+            updateStudyZoneOverlays();
+
+            loadingText.textContent = 'Processing ' + totalRegions + ' regions (' + files.length + ' files)...';
+
+            // Build GeoJSON in chunks to keep UI responsive
+            const geojson = { type: 'FeatureCollection', features: [] };
+            let i = 0;
+
+            async function runProcessing() {
+                while (i < totalRegions) {
+                    const chunkSize = 200;
+                    const end = Math.min(i + chunkSize, totalRegions);
+                    for (; i < end; i++) {
+                        const r = allRegionsData[i];
+                        if (!r.geometry) continue;
+                        const hue = (r.azimuth_degrees || 0) / 360;
+                        const color = `hsl(${hue * 360}, 80%, 55%)`;
+                        // Region centroid (Lambert93→WGS84 OR pass-through if already WGS-84)
+                        let cx = 0, cy = 0, n = 0;
+                        for (const tri of r.geometry) {
+                            for (const v of tri) { cx += v[0]; cy += v[1]; n++; }
+                        }
+                        const [centroid_lon, centroid_lat] = n > 0
+                            ? (r.isWGS84
+                                ? [cx / n, cy / n]
+                                : lambert93ToWGS84(cx / n + r.fileCenter[0], cy / n + r.fileCenter[1]))
+                            : [0, 0];
+                        // One MultiPolygon feature per region (each triangle = one sub-polygon).
+                        // ~100x fewer features than the per-triangle Feature emission, with the
+                        // same visual output and the same click-hit behaviour.
+                        const polys = [];
+                        for (const tri of r.geometry) {
+                            if (tri.length < 3) continue;
+                            const coordinates = r.isWGS84
+                                ? tri.map(v => [v[0], v[1]])
+                                : tri.map(v => lambert93ToWGS84(v[0] + r.fileCenter[0], v[1] + r.fileCenter[1]));
+                            coordinates.push(coordinates[0]);
+                            polys.push([coordinates]);
+                        }
+                        if (polys.length) {
+                            geojson.features.push({
+                                type: 'Feature',
+                                geometry: { type: 'MultiPolygon', coordinates: polys },
+                                properties: {
+                                    region_id: r.region_id,
+                                    source_file: r.source_file,
+                                    true_area_sqm: r.true_area_sqm,
+                                    tilt_degrees: r.tilt_degrees,
+                                    azimuth_degrees: r.azimuth_degrees,
+                                    building_ids: JSON.stringify(r.building_ids || []),
+                                    pv_scores: JSON.stringify(r.pv_scores || []),
+                                    centroid_lon,
+                                    centroid_lat,
+                                    color
+                                }
+                            });
+                        }
+                    }
+                    if (i < totalRegions) {
+                        loadingText.textContent = `Processing... ${i}/${totalRegions}`;
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+
+                loadingText.textContent = 'Rendering on map...';
+                document.getElementById('stat-file').textContent = files.length + ' files';
+                document.getElementById('stat-files').textContent = files.length;
+                document.getElementById('stat-regions').textContent = totalRegions;
+
+                if (map && map.getSource('roof-regions')) {
+                    map.getSource('roof-regions').setData(geojson);
+                    setTimeout(() => fitToData(), 500);
+                }
+                overlay.classList.add('hidden');
+                isProcessing = false;
+            }
+
+            runProcessing().catch(err => {
+                console.error('Processing error:', err);
+                isProcessing = false;
+                overlay.classList.add('hidden');
+            });
+        }
+
+        // --- Fit map to data bounds ---
+        function fitToData() {
+            if (!map || allRegionsData.length === 0) return;
+            let minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+            for (const r of allRegionsData) {
+                if (!r.geometry || !r.fileCenter) continue;
+                for (const tri of r.geometry) {
+                    for (const v of tri) {
+                        const [lon, lat] = r.isWGS84
+                            ? [v[0], v[1]]
+                            : lambert93ToWGS84(v[0] + r.fileCenter[0], v[1] + r.fileCenter[1]);
+                        minLon = Math.min(minLon, lon); maxLon = Math.max(maxLon, lon);
+                        minLat = Math.min(minLat, lat); maxLat = Math.max(maxLat, lat);
+                    }
+                }
+            }
+            if (minLon !== Infinity) map.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: 50, duration: 1000 });
+        }
+
+        // --- Clear all data ---
+        function clearData() {
+            allRegionsData = [];
+            fileInfos = [];
+            if (map && map.getSource('roof-regions')) map.getSource('roof-regions').setData({ type: 'FeatureCollection', features: [] });
+            if (map && map.getSource('roof-selected')) map.getSource('roof-selected').setData({ type: 'FeatureCollection', features: [] });
+            if (map && map.getSource('tile-footprints')) map.getSource('tile-footprints').setData({ type: 'FeatureCollection', features: [] });
+            if (map && map.getSource('processed-envelope')) map.getSource('processed-envelope').setData({ type: 'FeatureCollection', features: [] });
+            document.getElementById('stat-file').textContent = '0 files';
+            document.getElementById('stat-files').textContent = '0';
+            document.getElementById('stat-regions').textContent = '0';
+            document.getElementById('details-panel').classList.add('hidden');
+        }
+
+        // --- Wire up event listeners ---
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            if (e.target.files.length) processJsonFiles(e.target.files);
+        });
+
+        const dropZone = document.getElementById('drop-zone');
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) processJsonFiles(e.dataTransfer.files);
+        });
+
+        document.getElementById('btn-fit').addEventListener('click', fitToData);
+        document.getElementById('btn-fit-bbox').addEventListener('click', () => {
+            if (!map) return;
+            map.fitBounds(
+                [[STUDY_BBOX.minLon, STUDY_BBOX.minLat], [STUDY_BBOX.maxLon, STUDY_BBOX.maxLat]],
+                { padding: 50, duration: 1000 }
+            );
+        });
+        document.getElementById('bbox-toggle').addEventListener('change', (e) => {
+            if (!map) return;
+            const vis = e.target.checked ? 'visible' : 'none';
+            if (map.getLayer('study-bbox-line')) map.setLayoutProperty('study-bbox-line', 'visibility', vis);
+            if (map.getLayer('study-bbox-fill')) map.setLayoutProperty('study-bbox-fill', 'visibility', vis);
+        });
+        document.getElementById('footprints-toggle').addEventListener('change', (e) => {
+            if (!map) return;
+            const vis = e.target.checked ? 'visible' : 'none';
+            if (map.getLayer('tile-footprints-fill')) map.setLayoutProperty('tile-footprints-fill', 'visibility', vis);
+            if (map.getLayer('tile-footprints-line')) map.setLayoutProperty('tile-footprints-line', 'visibility', vis);
+        });
+        document.getElementById('envelope-toggle').addEventListener('change', (e) => {
+            if (!map) return;
+            const vis = e.target.checked ? 'visible' : 'none';
+            if (map.getLayer('processed-envelope-line')) map.setLayoutProperty('processed-envelope-line', 'visibility', vis);
+        });
+        document.getElementById('clip-toggle').addEventListener('change', applyClipFilter);
+        document.getElementById('btn-clear').addEventListener('click', clearData);
+        document.getElementById('btn-close-details').addEventListener('click', () => {
+            document.getElementById('details-panel').classList.add('hidden');
+            if (map && map.getSource('roof-selected')) {
+                map.getSource('roof-selected').setData({ type: 'FeatureCollection', features: [] });
+            }
+        });
+
+        document.getElementById('opacity-slider').addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById('opacity-val').textContent = Math.round(val * 100) + '%';
+            if (map) {
+                if (map.getLayer('roof-regions-fill')) map.setPaintProperty('roof-regions-fill', 'fill-opacity', val);
+                if (map.getLayer('roof-regions-line')) map.setPaintProperty('roof-regions-line', 'line-opacity', val);
+            }
+        });
+
+        // --- Start ---
+        initMap();
+
+        // --- Auto-load bundled tile JSONs ---------------------------
+        // List of tile JSONs shipped with the presentation.
+        const AUTO_TILES = [
+            "0547_6330","0547_6331","0547_6332","0547_6333","0547_6334",
+            "0548_6330","0548_6331","0548_6332","0548_6333",
+            "0549_6330","0549_6331","0549_6332","0549_6333"
+        ];
+        async function autoLoadTiles(){
+            const overlay = document.getElementById('loading-overlay');
+            const loadingText = document.getElementById('loading-text');
+            overlay.classList.remove('hidden');
+            loadingText.textContent = 'Fetching ' + AUTO_TILES.length + ' tile JSONs...';
+            try{
+                const files = [];
+                for(const t of AUTO_TILES){
+                    const r = await fetch('data/tiles/' + t + '.json');
+                    if(!r.ok) { console.warn('skip', t, r.status); continue; }
+                    const blob = await r.blob();
+                    files.push(new File([blob], t + '.json', { type:'application/json' }));
+                }
+                if(files.length === 0){
+                    loadingText.textContent = 'No tiles found at data/tiles/. Drag .json files in.';
+                    return;
+                }
+                processJsonFiles(files);
+            } catch(err){
+                console.error('autoLoadTiles error', err);
+                overlay.classList.add('hidden');
+            }
+        }
+        // Wait until maplibre map style is ready before loading.
+        if(map && map.isStyleLoaded && map.isStyleLoaded()){ autoLoadTiles(); }
+        else { map?.on('load', autoLoadTiles); }
+    </script>
+</body>
+</html>

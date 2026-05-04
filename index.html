@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>National PV Roof Database — 3-Stage Geospatial Workflow</title>
+
+<!-- Fonts (LaTeX-inspired sans + monospace) — vendored, no external requests -->
+<link rel="stylesheet" href="vendor/fonts/fonts.css">
+
+<!-- Math rendering — vendored -->
+<link rel="stylesheet" href="vendor/katex/katex.min.css">
+<script defer src="vendor/katex/katex.min.js"></script>
+<script defer src="vendor/katex/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\\\(',right:'\\\\)',display:false},{left:'\\\\[',right:'\\\\]',display:true}]});"></script>
+
+<!-- Charts — vendored -->
+<script src="vendor/chart.umd.min.js"></script>
+
+<style>
+  /* =========================================================
+     Palette (per spec)
+     ========================================================= */
+  :root{
+    --paper:    #FFFFFF;
+    --tint:     #F4F6F9;
+    --tint-2:   #ECEFF3;
+    --rule:     #B8B8B8;
+    --rule-soft:#D9DCE0;
+    --ink:      #1A1A1A;
+    --ink-soft: #4A4A4A;
+    --ink-mute: #6B7280;
+    --navy:     #1F4E79;
+    --navy-10:  rgba(31,78,121,.10);
+    --navy-20:  rgba(31,78,121,.20);
+    --navy-08:  rgba(31,78,121,.08);
+    --emerald:  #2E7D32;
+    --emerald-10: rgba(46,125,50,.10);
+    --emerald-20: rgba(46,125,50,.20);
+    --warn:     #C62828;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-feature-settings:"kern","liga","cv11";
+    line-height:1.5;font-weight:400;
+    -webkit-font-smoothing:antialiased;}
+
+  code, .mono{ font-family:'JetBrains Mono',ui-monospace,monospace; font-size:.92em }
+
+  /* =========================================================
+     Slide layout — scroll-snap, full-viewport per section
+     ========================================================= */
+  .deck{
+    scroll-snap-type:y mandatory;
+    overflow-y:scroll;
+    height:100vh;
+    scroll-behavior:smooth;
+  }
+  .slide{
+    scroll-snap-align:start;
+    min-height:100vh;
+    padding:64px 8vw 64px;
+    border-bottom:1px solid var(--rule-soft);
+    display:flex;flex-direction:column;justify-content:center;
+    position:relative;
+    background:var(--paper);
+  }
+  .slide.tinted{ background:var(--tint); }
+
+  /* Top hairline rule + slide number ring */
+  .slide::before{
+    content:"";position:absolute;top:24px;left:8vw;right:8vw;
+    height:1px;background:var(--rule-soft);
+  }
+  .slide-num{
+    position:absolute; top:24px; right:8vw;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:var(--ink-mute); letter-spacing:.04em;
+    background:var(--paper); padding:0 6px; transform:translateY(-50%);
+  }
+  .slide-tag{
+    position:absolute; top:24px; left:8vw;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:var(--navy); letter-spacing:.08em; font-weight:600;
+    background:var(--paper); padding:0 6px; transform:translateY(-50%);
+  }
+
+  /* =========================================================
+     Typography
+     ========================================================= */
+  h1.deck-title{
+    font-family:'Crimson Pro', 'Computer Modern Serif', Georgia, serif;
+    font-weight:600; font-size:64px; line-height:1.05;
+    letter-spacing:-.01em; margin:0 0 16px; color:var(--ink);
+  }
+  h2.slide-title{
+    font-family:'Crimson Pro', Georgia, serif;
+    font-weight:600; font-size:38px; line-height:1.1;
+    letter-spacing:-.005em; margin:0 0 8px; color:var(--ink);
+  }
+  h2.slide-title em { color:var(--navy); font-style:italic; font-family:inherit; }
+  h3{ font-size:18px; font-weight:600; margin:0 0 8px; color:var(--ink); letter-spacing:.005em;}
+  .lede{ font-size:18px; color:var(--ink-soft); margin:0 0 28px; max-width:80ch;}
+  .sub{ font-size:14px; color:var(--ink-mute);}
+  .footnote{ font-size:11px; color:var(--ink-mute); font-style:italic; }
+
+  ul.tight{ margin:6px 0 0 0; padding-left:20px;}
+  ul.tight li{ margin-bottom:4px; }
+
+  /* Definition rows */
+  .deflist{ display:grid; grid-template-columns:max-content 1fr; gap:6px 14px;
+            font-size:14px; color:var(--ink-soft); margin:0; }
+  .deflist dt{ color:var(--navy); font-weight:600; margin:0;
+               font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .deflist dd{ margin:0; }
+
+  /* =========================================================
+     Layout primitives
+     ========================================================= */
+  .row{ display:grid; gap:32px; }
+  .row-2{ grid-template-columns:1fr 1fr; }
+  .row-3{ grid-template-columns:1fr 1fr 1fr; }
+  .row-25-75{ grid-template-columns:25% 75%; }
+  .row-60-40{ grid-template-columns:60% 40%; }
+  .row-40-60{ grid-template-columns:40% 60%; }
+
+  /* Cards */
+  .card{
+    background:var(--paper);
+    border:1px solid var(--rule-soft);
+    border-radius:4px;
+    padding:18px 20px;
+  }
+  .card.solid-navy{ background:var(--navy); color:#fff; border-color:var(--navy); }
+  .card.solid-navy h3, .card.solid-navy .label{ color:#fff; }
+  .card.tint-emerald{ background:var(--emerald-10); border-color:var(--emerald); }
+  .card.tint-navy{ background:var(--navy-08); border-color:var(--navy); }
+
+  .label{
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    letter-spacing:.10em; text-transform:uppercase; color:var(--ink-mute);
+    margin-bottom:4px;
+  }
+
+  /* Stat / metric block */
+  .stat{ display:flex; flex-direction:column; gap:2px; }
+  .stat .num{
+    font-family:'Crimson Pro', Georgia, serif;
+    font-size:44px; line-height:1; font-weight:600; color:var(--navy);
+    font-feature-settings:"tnum";
+  }
+  .stat .num.emerald{ color:var(--emerald); }
+  .stat .unit{ font-size:13px; color:var(--ink-mute); }
+  .stat .caption{ font-size:13px; color:var(--ink-soft); }
+
+  /* Tables (LaTeX booktabs feel) */
+  table.book{
+    border-collapse:collapse; width:100%; font-size:14px;
+    font-variant-numeric:tabular-nums;
+  }
+  table.book th{ text-align:left; font-weight:600; color:var(--ink); padding:8px 10px;
+    border-top:1.5px solid var(--ink); border-bottom:.5px solid var(--ink); }
+  table.book td{ padding:6px 10px; color:var(--ink-soft); }
+  table.book tr:last-child td{ border-bottom:1.5px solid var(--ink); }
+  table.book td.r, table.book th.r{ text-align:right; }
+  table.book td.ok{ color:var(--emerald); font-weight:600; }
+  table.book td.warn{ color:var(--warn); font-weight:600; }
+  table.book .midrule td{ border-top:.5px solid var(--rule); }
+  table.book tfoot td{ border-top:1.5px solid var(--ink); font-weight:600; color:var(--ink); }
+
+  /* Accent strip on cards */
+  .accent-l{ border-left:3px solid var(--navy); padding-left:14px; }
+  .accent-l.emerald{ border-left-color:var(--emerald); }
+
+  /* Block / quote */
+  .block{
+    background:var(--tint); border-left:3px solid var(--navy);
+    padding:14px 18px; border-radius:2px; font-size:14px; color:var(--ink-soft);
+  }
+  .block.emerald{ border-left-color:var(--emerald); background:var(--emerald-10);}
+  .block strong{ color:var(--ink); }
+
+  /* Chart wrapper */
+  .chart-wrap{ position:relative; height:340px; width:100%; }
+  .chart-wrap.tall{ height:420px; }
+  .chart-wrap.short{ height:240px; }
+
+  /* =========================================================
+     Pipeline SVG diagram
+     ========================================================= */
+  svg .stage rect{ fill:var(--navy); }
+  svg .stage text{ fill:#fff; font-family:'Inter'; font-weight:600; }
+  svg .stage .sub{ fill:#fff; opacity:.85; font-weight:400; font-family:'JetBrains Mono'; font-size:10px; }
+  svg .input rect{ fill:#fff; stroke:var(--navy); stroke-width:.7; opacity:.95; }
+  svg .input text{ fill:var(--ink); font-family:'Inter'; font-size:11px; }
+  svg .store path { fill:#fff; stroke:var(--emerald); stroke-width:.9; }
+  svg .store text{ fill:var(--ink); font-family:'Inter'; font-weight:600; font-size:11px; }
+  svg .transient rect{ fill:#fff; stroke:var(--rule); stroke-width:.5; stroke-dasharray:3 2; }
+  svg .transient text{ fill:var(--ink-mute); font-family:'Inter'; font-style:italic; font-size:11px; }
+  svg .arrow{ stroke:var(--navy); stroke-width:1.3; fill:none; }
+  svg .arrow.dashed{ stroke:var(--rule); stroke-dasharray:4 3; }
+  svg .arrow.loop  { stroke:var(--emerald); stroke-dasharray:1 3; stroke-linecap:round; }
+
+  /* Data-flow animation: marching ants on selected paths */
+  .flow{
+    stroke-dasharray: 6 4;
+    animation: dash 1.4s linear infinite;
+  }
+  @keyframes dash{ to{ stroke-dashoffset:-100; } }
+
+  /* Pulse on stage boxes (subtle) */
+  .stage rect{ transform-origin:center; transform-box:fill-box;
+               animation:pulse 4s ease-in-out infinite; }
+  .stage.s1 rect{ animation-delay:0s }
+  .stage.s2 rect{ animation-delay:1.3s }
+  .stage.s3 rect{ animation-delay:2.6s }
+  @keyframes pulse{
+    0%,100%{ filter:drop-shadow(0 0 0 rgba(31,78,121,0)); }
+    50%   { filter:drop-shadow(0 0 6px rgba(31,78,121,.35)); }
+  }
+
+  /* Counter animation */
+  .count{ font-variant-numeric:tabular-nums; }
+
+  /* =========================================================
+     State-machine animation
+     ========================================================= */
+  .sm-track{
+    position:relative; height:80px; padding-top:18px;
+  }
+  .sm-states{ display:flex; gap:14px; align-items:center; justify-content:space-between; }
+  .sm-state{
+    flex:1; text-align:center; font-size:13px; padding:10px 0;
+    border:1px solid var(--rule-soft); border-radius:3px; background:#fff;
+    color:var(--ink-soft); position:relative; transition: all .25s ease;
+    font-family:'JetBrains Mono',monospace;
+  }
+  .sm-state.done{ background:var(--emerald-10); border-color:var(--emerald); color:var(--emerald); font-weight:600; }
+  .sm-state.fail{ background:rgba(198,40,40,.07); border-color:var(--warn); color:var(--warn); }
+  .sm-arrow{ color:var(--rule); font-size:14px; }
+  .sm-token{
+    position:absolute; top:6px; width:14px; height:14px; border-radius:50%;
+    background:var(--navy); box-shadow:0 0 0 4px var(--navy-10);
+    animation: sm-walk 9s linear infinite;
+  }
+  @keyframes sm-walk{
+    0%   { left:0%;  background:var(--navy); }
+    18%  { left:23%; background:var(--navy); }
+    40%  { left:46%; background:var(--navy); }
+    62%  { left:69%; background:var(--navy); }
+    85%  { left:92%; background:var(--emerald); box-shadow:0 0 0 4px var(--emerald-10);}
+    100% { left:100%;background:var(--emerald); box-shadow:0 0 0 4px var(--emerald-10);}
+  }
+
+  /* =========================================================
+     Progress bar / filling capacity
+     ========================================================= */
+  .bar{ height:6px; border-radius:3px; background:var(--tint-2); overflow:hidden; margin-top:6px;}
+  .bar > span{ display:block; height:100%; background:var(--navy);
+    width:0; transition:width 1.2s cubic-bezier(.2,.7,.2,1); }
+  .bar.emerald > span{ background:var(--emerald); }
+
+  /* Cadastre / engine schematic */
+  .schema{
+    display:grid; grid-template-columns:repeat(6,1fr); gap:6px;
+  }
+  .schema .step{
+    background:var(--paper); border:1px solid var(--rule-soft); border-radius:3px;
+    padding:10px; font-size:12px; color:var(--ink-soft);
+    position:relative;
+  }
+  .schema .step .n{
+    position:absolute; top:-8px; left:-8px;
+    width:18px;height:18px;border-radius:50%;background:var(--navy);color:#fff;
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    display:flex;align-items:center;justify-content:center;font-weight:600;
+  }
+
+  /* Top progress dot navigator */
+  .nav-dots{
+    position:fixed; right:14px; top:50%; transform:translateY(-50%);
+    display:flex; flex-direction:column; gap:8px; z-index:50;
+  }
+  .nav-dots a{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--rule-soft); border:1px solid var(--rule);
+    transition:all .2s; display:block;
+  }
+  .nav-dots a:hover{ background:var(--navy); border-color:var(--navy); transform:scale(1.4);}
+  .nav-dots a.active{ background:var(--navy); border-color:var(--navy); transform:scale(1.5);}
+
+  /* Hint at start */
+  .scroll-hint{
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--ink-mute);
+    letter-spacing:.08em; animation: bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{ 0%,100%{ transform:translate(-50%,0);} 50%{ transform:translate(-50%,4px);} }
+
+  /* Inline KaTeX size tweak */
+  .katex{ font-size:1.04em; }
+
+  /* Embedded viewer iframe */
+  .viewer-shell{ position:relative; }
+  .viewer-frame{
+    display:block;
+    width:100%; height:520px;
+    border:1px solid var(--rule);
+    border-radius:4px;
+    background:#0f172a; /* matches viewer dark theme so loading isn't jarring */
+    box-shadow:0 1px 0 rgba(0,0,0,.04);
+  }
+  /* When the iframe element is the fullscreen target the browser drops
+     our height/border styles; ensure it fills the screen cleanly. */
+  .viewer-frame:fullscreen,
+  .viewer-frame:-webkit-full-screen{
+    width:100vw; height:100vh; border:0; border-radius:0;
+  }
+  .viewer-cap{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:6px; gap:18px;
+  }
+  .viewer-cap .actions{
+    display:flex; align-items:center; gap:14px;
+  }
+  .viewer-cap .open-new,
+  .viewer-cap .fs-btn{
+    font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--navy);
+    text-decoration:none; border-bottom:1px solid var(--navy);
+    background:none; padding:0; cursor:pointer; line-height:1.4;
+  }
+  .viewer-cap .open-new:hover,
+  .viewer-cap .fs-btn:hover{ color:var(--emerald); border-color:var(--emerald); }
+  /* Floating fullscreen affordance pinned to the iframe corner — visible
+     on hover so it doesn't compete with the map content. */
+  .fs-corner{
+    position:absolute; top:10px; right:10px; z-index:5;
+    background:rgba(15,23,42,0.78); color:#fff; border:1px solid rgba(255,255,255,.18);
+    border-radius:4px; padding:6px 10px;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    cursor:pointer; backdrop-filter:blur(6px);
+    opacity:0; transition:opacity .18s ease;
+  }
+  .viewer-shell:hover .fs-corner,
+  .fs-corner:focus-visible{ opacity:1; }
+  .fs-corner:hover{ background:rgba(31,78,121,0.92); }
+  .fs-hint{
+    position:absolute; bottom:10px; left:10px; z-index:5;
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+    color:rgba(255,255,255,.75); background:rgba(15,23,42,0.55);
+    padding:3px 8px; border-radius:3px; pointer-events:none;
+    opacity:0; transition:opacity .18s ease;
+  }
+  .viewer-frame:fullscreen + .fs-hint,
+  .viewer-frame:-webkit-full-screen + .fs-hint{ opacity:1; }
+
+  /* Hero schematic for slide 2 */
+  .hero-flow{
+    display:flex; align-items:center; justify-content:center; gap:18px;
+    margin:48px auto; max-width:1100px;
+  }
+  .hero-flow .blob{
+    flex:1; max-width:260px; aspect-ratio:1;
+    border:1.5px solid var(--rule); border-radius:8px; background:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:18px; text-align:center; gap:8px;
+    transition:transform .25s ease;
+  }
+  .hero-flow .blob:hover{ transform:translateY(-2px); }
+  .hero-flow .blob.navy   { border-color:var(--navy);    background:var(--navy-08);}
+  .hero-flow .blob.emerald{ border-color:var(--emerald); background:var(--emerald-10);}
+  .hero-flow .blob .h{ font-family:'Crimson Pro',serif; font-size:22px; font-weight:600; color:var(--ink); }
+  .hero-flow .blob .s{ font-size:13px; color:var(--ink-mute); line-height:1.4; }
+  .hero-flow .arrow-x{ width:60px; height:2px; background:var(--rule); position:relative; flex:0 0 60px; }
+  .hero-flow .arrow-x::after{
+    content:""; position:absolute; right:-1px; top:50%; transform:translateY(-50%);
+    width:0; height:0; border-left:8px solid var(--rule);
+    border-top:5px solid transparent; border-bottom:5px solid transparent;
+  }
+  .hero-flow .arrow-x::before{
+    content:""; position:absolute; left:0; top:0; width:0; height:100%;
+    background:var(--navy);
+    animation:flow-fill 2.6s ease-in-out infinite;
+  }
+  @keyframes flow-fill{
+    0%   { width:0;    background:var(--navy); }
+    45%  { width:100%; background:var(--navy); }
+    55%  { width:100%; background:var(--emerald); }
+    100% { width:0;    background:var(--emerald); }
+  }
+
+  /* Big problem-stat block (slide 3) */
+  .big-stat{
+    display:flex; flex-direction:column; gap:6px; padding:28px 32px;
+    border:1px solid var(--rule-soft); border-radius:4px; background:#fff;
+  }
+  .big-stat .v{
+    font-family:'Crimson Pro',serif; font-weight:600; font-size:72px;
+    line-height:1; color:var(--navy); font-variant-numeric:tabular-nums;
+  }
+  .big-stat .v.warn{ color:var(--warn); }
+  .big-stat .v.ok  { color:var(--emerald); }
+  .big-stat .l{ font-size:13px; color:var(--ink-mute); letter-spacing:.02em; }
+  .big-stat .h{ font-size:18px; color:var(--ink); font-weight:600; }
+  .vs-divider{ font-family:'Crimson Pro',serif; font-style:italic;
+    font-size:32px; color:var(--ink-mute); align-self:center; }
+
+  /* Print niceties */
+  @media print{
+    .deck{height:auto;overflow:visible;scroll-snap-type:none;}
+    .slide{page-break-after:always;min-height:auto;}
+    .nav-dots, .scroll-hint{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Right-side dot navigator -->
+<nav class="nav-dots" id="nav-dots"></nav>
+
+<main class="deck" id="deck">
+
+<!-- ============================================================
+     SLIDE 1 — TITLE
+     ============================================================ -->
+<section class="slide" id="s-title" data-tag="lidar_loop · may 2026">
+  <span class="slide-tag">LIDAR_LOOP · MAY 2026</span>
+  <span class="slide-num">01 / 07</span>
+
+  <div style="max-width:1100px">
+    <div class="label">Research presentation</div>
+    <h1 class="deck-title">National PV Roof Database</h1>
+    <p style="font-family:'Crimson Pro',Georgia,serif;font-style:italic;font-size:24px;color:var(--ink-soft);margin:0 0 32px;">
+      From IGN LiDAR HD to per-panel records — pipeline, time, and storage<br>
+      <span style="font-size:18px;">illustrated with département 82 (Tarn-et-Garonne)</span>
+    </p>
+
+    <div class="row row-3" style="gap:24px;margin-top:36px">
+      <div class="card accent-l">
+        <div class="label">Inputs</div>
+        <ul class="tight">
+          <li>IGN LiDAR HD (national point cloud)</li>
+          <li>Cadastre Etalab</li>
+          <li>BDOrtho 20&nbsp;cm imagery</li>
+          <li>PV-presence model scores</li>
+        </ul>
+      </div>
+      <div class="card accent-l">
+        <div class="label">Pipeline</div>
+        <ul class="tight">
+          <li><strong>Stage 1 · Index</strong> &nbsp;tile selection</li>
+          <li><strong>Stage 2 · Segment</strong> &nbsp;LiDAR roof planes</li>
+          <li><strong>Stage 3 · Assign</strong> &nbsp;panels &rarr; planes</li>
+        </ul>
+      </div>
+      <div class="card accent-l emerald">
+        <div class="label">Output schema (per panel)</div>
+        <ul class="tight">
+          <li>lon / lat (WGS-84), area<sub>m²</sub></li>
+          <li>tilt &amp; azimuth (deg)</li>
+          <li>building_id, source_tile, source_image</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-hint">↓ &nbsp; scroll &nbsp; or &nbsp; press → &nbsp;</div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 2 — GOAL  (general audience, mostly visual)
+     ============================================================ -->
+<section class="slide" id="s-goal">
+  <span class="slide-tag">§ 1 · GOAL</span>
+  <span class="slide-num">02 / 07</span>
+
+  <h2 class="slide-title">Map every solar panel in France — <em>automatically.</em></h2>
+  <p class="lede">From open public data we build a single, queryable catalogue of every photovoltaic panel installed on French rooftops.</p>
+
+  <div class="hero-flow">
+    <div class="blob navy">
+      <div class="h">Open data</div>
+      <div class="s">aerial imagery<br>+ 3D LiDAR<br>+ cadastre</div>
+    </div>
+    <div class="arrow-x"></div>
+    <div class="blob">
+      <div class="h">Pipeline</div>
+      <div class="s">computer vision<br>+ point-cloud<br>geometry</div>
+    </div>
+    <div class="arrow-x"></div>
+    <div class="blob emerald">
+      <div class="h">Panel database</div>
+      <div class="s">where each panel is<br>+ how it's oriented<br>+ how big it is</div>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-family:'Crimson Pro',serif;font-style:italic;font-size:20px;color:var(--ink-mute);margin-top:18px;">
+    96 départements &nbsp;·&nbsp; ~hundreds of thousands of panels &nbsp;·&nbsp; one consistent table
+  </p>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 3 — THE PROBLEM  (size + time in one slide)
+     ============================================================ -->
+<section class="slide tinted" id="s-problem">
+  <span class="slide-tag">§ 2 · THE PROBLEM</span>
+  <span class="slide-num">03 / 07</span>
+
+  <h2 class="slide-title">The data is <em>huge</em> — and slow.</h2>
+  <p class="lede">A naïve "download everything, process everything" approach is impossible on a single machine.</p>
+
+  <div class="row row-2" style="gap:28px;margin-top:30px;align-items:center">
+    <div class="big-stat">
+      <div class="l">FRENCH NATIONAL LIDAR DATASET</div>
+      <div class="v warn count" data-target="90" data-suffix=" TB">0</div>
+      <div class="h">≈ 490 000 tiles · 1 km × 1 km each</div>
+      <div class="s" style="font-size:13px;color:var(--ink-soft);margin-top:8px">
+        That's about <strong>180 hard-drives</strong> worth of raw 3D point clouds.
+      </div>
+    </div>
+    <div class="big-stat">
+      <div class="l">NAÏVE END-TO-END WALL-CLOCK</div>
+      <div class="v warn count" data-target="3" data-suffix=" weeks">0</div>
+      <div class="h">on a single workstation, without filtering</div>
+      <div class="s" style="font-size:13px;color:var(--ink-soft);margin-top:8px">
+        Even with a fast network — most of the time is just downloading data we will throw away.
+      </div>
+    </div>
+  </div>
+
+  <div class="vs-divider" style="text-align:center;margin:22px 0 10px">↓ &nbsp; what our pipeline does &nbsp; ↓</div>
+
+  <div class="row row-2" style="gap:28px;align-items:center">
+    <div class="big-stat" style="border-color:var(--emerald)">
+      <div class="l">ONLY TILES WITH PV-POSITIVE BUILDINGS</div>
+      <div class="v ok"><span class="count" data-target="20">0</span><span style="font-size:36px;color:var(--ink-mute)"> %</span></div>
+      <div class="h">of tiles ever touched</div>
+      <div class="s" style="font-size:13px;color:var(--ink-soft);margin-top:8px">
+        Pre-filter discards rural, forested, empty tiles before any download.
+      </div>
+    </div>
+    <div class="big-stat" style="border-color:var(--emerald)">
+      <div class="l">END-TO-END ON ONE MACHINE</div>
+      <div class="v ok count" data-target="3" data-suffix="–5 days">0</div>
+      <div class="h">overlapped download + compute</div>
+      <div class="s" style="font-size:13px;color:var(--ink-soft);margin-top:8px">
+        LAZ files are deleted as they're processed — never more than ~15 GB on disk at once.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 4 — PIPELINE OVERVIEW (ANIMATED SVG)
+     ============================================================ -->
+<section class="slide" id="s-pipeline">
+  <span class="slide-tag">§ 3 · PIPELINE OVERVIEW</span>
+  <span class="slide-num">04 / 07</span>
+
+  <h2 class="slide-title">3 stages, animated.</h2>
+  <p class="lede">Top row: stage 0 indexes the active tiles; stage 1 downloads &amp; segments roofs from LiDAR. Bottom row: stage 2a predicts panel masks from imagery; stage 2b binds each panel to a roof plane. LAZ files are deleted as soon as each tile's JSON is written.</p>
+
+  <div style="width:100%;max-width:1500px;margin:0 auto">
+    <svg viewBox="0 0 1500 540" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="3-stage pipeline">
+      <defs>
+        <marker id="arrh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--navy)"/>
+        </marker>
+        <marker id="arrh-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rule)"/>
+        </marker>
+        <marker id="arrh-em" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--emerald)"/>
+        </marker>
+      </defs>
+
+      <!-- Stage band tints -->
+      <rect x="0"    y="40" width="380" height="460" fill="var(--tint)" rx="3"/>
+      <rect x="395"  y="40" width="650" height="460" fill="var(--tint)" rx="3"/>
+      <rect x="1060" y="40" width="440" height="460" fill="var(--tint)" rx="3"/>
+
+      <!-- Band labels -->
+      <text x="190" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 1 · INDEX</text>
+      <text x="720" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 2 · SEGMENT</text>
+      <text x="1280" y="65" text-anchor="middle" fill="var(--navy)" font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 3 · ASSIGN</text>
+
+      <!-- Inputs (Stage 1) -->
+      <g class="input">
+        <rect x="20"  y="120" width="160" height="40" rx="3"/><text x="100" y="138" text-anchor="middle" font-weight="600">PV CSVs</text><text x="100" y="152" text-anchor="middle" font-size="9" fill="var(--ink-mute)">score_roof_*.csv</text>
+        <rect x="20"  y="190" width="160" height="40" rx="3"/><text x="100" y="208" text-anchor="middle" font-weight="600">Cadastre SHP</text><text x="100" y="222" text-anchor="middle" font-size="9" fill="var(--ink-mute)">batiments_*.shp</text>
+        <rect x="20"  y="260" width="160" height="40" rx="3"/><text x="100" y="278" text-anchor="middle" font-weight="600">IGN WFS</text><text x="100" y="292" text-anchor="middle" font-size="9" fill="var(--ink-mute)">LIDAR-HD:dalle</text>
+      </g>
+
+      <!-- Stage 0 -->
+      <g class="stage s1">
+        <rect x="220" y="180" width="150" height="60" rx="4"/>
+        <text x="295" y="208" text-anchor="middle" font-size="15">Stage 0</text>
+        <text x="295" y="226" text-anchor="middle" class="sub">stage0_build_index.py</text>
+      </g>
+
+      <!-- SQLite store -->
+      <g class="store">
+        <path d="M 220 320
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="270" cy="320" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="270" y="350" text-anchor="middle">SQLite queue</text>
+        <text x="270" y="365" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">france_pv.sqlite</text>
+      </g>
+
+      <!-- Stage 1 -->
+      <g class="stage s2">
+        <rect x="430" y="120" width="180" height="56" rx="4"/>
+        <text x="520" y="146" text-anchor="middle" font-size="15">Stage 1</text>
+        <text x="520" y="164" text-anchor="middle" class="sub">stage1_run.py</text>
+      </g>
+
+      <!-- LAZ buffer (transient) -->
+      <g class="transient">
+        <rect x="640" y="125" width="170" height="46" rx="3"/>
+        <text x="725" y="147" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-mute)">LAZ buffer (transient)</text>
+        <text x="725" y="161" text-anchor="middle" font-size="10">≤ 60 tiles · ≤ 15 GB</text>
+      </g>
+
+      <!-- Engine v2 -->
+      <g>
+        <rect x="430" y="220" width="380" height="120" rx="4" fill="var(--navy-08)" stroke="var(--navy)" stroke-width="0.7"/>
+        <text x="620" y="245" text-anchor="middle" font-family="Inter" font-weight="700" fill="var(--navy)" font-size="13">Segmentation engine v2 — per LAZ tile, per building</text>
+        <text x="620" y="270" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">clip class-6 → cadastre · voxel 1 m · 2D Delaunay</text>
+        <text x="620" y="288" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">region-grow normals (cos 8°) · merge coplanar (cos 3°)</text>
+        <text x="620" y="306" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">project on mean plane → JSON</text>
+      </g>
+
+      <!-- Per-tile JSONs -->
+      <g class="store">
+        <path d="M 870 240
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="920" cy="240" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="920" y="270" text-anchor="middle">Per-tile JSONs</text>
+        <text x="920" y="285" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">≈ 430 KB / tile</text>
+      </g>
+
+      <!-- BDOrtho input -->
+      <g class="input">
+        <rect x="1080" y="125" width="170" height="46" rx="3"/>
+        <text x="1165" y="147" text-anchor="middle" font-weight="600">BDOrtho 20 cm</text>
+        <text x="1165" y="161" text-anchor="middle" font-size="9" fill="var(--ink-mute)">per-building JPG + .aux.xml</text>
+      </g>
+
+      <!-- Stage 2a -->
+      <g class="stage s3">
+        <rect x="1100" y="200" width="160" height="56" rx="4"/>
+        <text x="1180" y="226" text-anchor="middle" font-size="15">Stage 2a</text>
+        <text x="1180" y="244" text-anchor="middle" class="sub">predict_panels.py</text>
+      </g>
+
+      <!-- Panel polygons store -->
+      <g class="store">
+        <path d="M 1310 200
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="1360" cy="200" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="1360" y="230" text-anchor="middle">Panel polygons</text>
+        <text x="1360" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">panels__{dept}.geojson</text>
+      </g>
+
+      <!-- Stage 2b -->
+      <g class="stage s3">
+        <rect x="1100" y="320" width="160" height="56" rx="4"/>
+        <text x="1180" y="346" text-anchor="middle" font-size="15">Stage 2b</text>
+        <text x="1180" y="364" text-anchor="middle" class="sub">stage2_panels.py</text>
+      </g>
+
+      <!-- Panel database (final) -->
+      <g class="store">
+        <path d="M 1310 320
+                 a 50 9 0 0 0 100 0
+                 v 70
+                 a 50 9 0 0 1 -100 0 z" fill="var(--emerald-10)"/>
+        <ellipse cx="1360" cy="320" rx="50" ry="9" fill="var(--emerald-10)" stroke="var(--emerald)" stroke-width="1.2"/>
+        <text x="1360" y="365" text-anchor="middle" font-weight="700" font-size="12">Panel database</text>
+        <text x="1360" y="380" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">SQLite · GeoJSON · CSV</text>
+      </g>
+
+      <!-- Arrows: animated data flow -->
+      <path class="arrow flow" d="M 180 140 L 220 195"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 180 210 L 220 210"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 180 280 L 220 230"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 295 240 L 295 311"  marker-end="url(#arrh-em)"/>
+      <path class="arrow flow" d="M 320 345 L 430 148"  marker-end="url(#arrh)"/>
+      <path class="arrow"      d="M 610 148 L 640 148"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 725 175 L 620 220"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 810 280 L 870 268"  marker-end="url(#arrh-em)"/>
+
+      <!-- Stage 2a arrows -->
+      <path class="arrow flow" d="M 1165 175 L 1165 200" marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 1260 225 L 1310 220" marker-end="url(#arrh-em)"/>
+
+      <!-- Cross-stage: JSONs -> Stage 2b -->
+      <path class="arrow flow" d="M 970 270 C 1040 280, 1040 350, 1100 348" marker-end="url(#arrh)"/>
+
+      <!-- Panel polygons -> Stage 2b -->
+      <path class="arrow flow" d="M 1360 256 C 1360 290, 1260 305, 1230 320" marker-end="url(#arrh)"/>
+
+      <!-- Stage 2b -> final DB -->
+      <path class="arrow flow" d="M 1260 348 L 1310 348" marker-end="url(#arrh-em)"/>
+    </svg>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 5 — STAGE 0 (INDEX)
+     ============================================================ -->
+<!-- ============================================================
+     SLIDE 5 — INDEX  +  DOWNLOAD + PROCESS  (merged)
+     ============================================================ -->
+<section class="slide tinted" id="s-index-download">
+  <span class="slide-tag">§ 4 · INDEX → DOWNLOAD</span>
+  <span class="slide-num">05 / 07</span>
+
+  <h2 class="slide-title">Pick the tiles, then stream them through workers.</h2>
+  <p class="lede">First we decide <em>which</em> tiles to fetch. Then a queue feeds parallel download &amp; processing workers that delete each LAZ as soon as it's been turned into a roof-region JSON.</p>
+
+  <!-- Block 1 — INDEX (5 numbered steps + tile reduction bar) -->
+  <h3 style="margin-bottom:8px">① &nbsp; Index — decide which tiles to download</h3>
+  <div class="schema" style="grid-template-columns:repeat(5,1fr)">
+    <div class="step"><span class="n">1</span><strong>Read PV scores</strong><br>keep buildings with <code>Score&gt;0.5</code></div>
+    <div class="step"><span class="n">2</span><strong>Load cadastre</strong><br>build polygons for those buildings</div>
+    <div class="step"><span class="n">3</span><strong>Query IGN WFS</strong><br>tiles in the département bbox</div>
+    <div class="step"><span class="n">4</span><strong>Spatial join</strong><br>building&nbsp;centroid → tile</div>
+    <div class="step"><span class="n">5</span><strong>Queue active tiles</strong><br>SQLite, one row per tile</div>
+  </div>
+
+  <div style="margin-top:14px;display:flex;gap:24px;align-items:center">
+    <div style="flex:1">
+      <div class="label">Tile reduction (dépt 82)</div>
+      <div class="bar"><span style="width:23.5%"></span></div>
+      <div style="font-size:11px;color:var(--ink-mute);margin-top:4px;display:flex;justify-content:space-between">
+        <span>0</span><span>1 651 / 7 025 tiles · <strong style="color:var(--emerald)">23.5 %</strong> kept</span><span>7 025</span>
+      </div>
+    </div>
+    <div class="stat" style="min-width:160px"><div class="num emerald count" data-target="7" data-suffix=" s">0</div><div class="unit">indexing wall-clock</div></div>
+  </div>
+
+  <!-- Block 2 — DOWNLOAD + PROCESS (state machine) -->
+  <h3 style="margin:28px 0 8px">② &nbsp; Download &amp; process — animated queue</h3>
+  <div class="card tint-navy" style="padding:22px 26px">
+    <div class="sm-track">
+      <div class="sm-token" id="sm-token"></div>
+      <div class="sm-states">
+        <div class="sm-state">pending</div>
+        <div class="sm-arrow">&rarr;</div>
+        <div class="sm-state">downloading</div>
+        <div class="sm-arrow">&rarr;</div>
+        <div class="sm-state">ready</div>
+        <div class="sm-arrow">&rarr;</div>
+        <div class="sm-state">processing</div>
+        <div class="sm-arrow">&rarr;</div>
+        <div class="sm-state done">done</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-mute)">
+      <span>parallel: 4–8 download threads · 6–12 process workers</span>
+      <span>each LAZ is deleted as soon as its JSON is written</span>
+      <span>≤ 15 GB on disk · resumable</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 7 — SEGMENTATION ENGINE V2
+     ============================================================ -->
+<!-- ============================================================
+     SLIDE 6 — SEGMENTATION ENGINE  +  EMBEDDED JSON VIEWER
+     ============================================================ -->
+<section class="slide tinted" id="s-engine">
+  <span class="slide-tag">§ 5 · ROOF SEGMENTATION</span>
+  <span class="slide-num">06 / 07</span>
+
+  <h2 class="slide-title">From a 3D point cloud to <em>roof planes</em>.</h2>
+  <p class="lede">For every PV-positive building in a tile, the engine isolates the roof points, fits flat regions, and emits one tilt/azimuth/area record per region — all in a JSON file per tile.</p>
+
+  <div class="row row-40-60" style="gap:24px;align-items:start">
+    <div>
+      <div class="schema" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div class="step"><span class="n">1</span><strong>Clip</strong> building points to cadastre</div>
+        <div class="step"><span class="n">2</span><strong>Voxelize</strong> on a 1&nbsp;m grid</div>
+        <div class="step"><span class="n">3</span><strong>Triangulate</strong> &amp; filter slivers</div>
+        <div class="step"><span class="n">4</span><strong>Region-grow</strong> by surface normal</div>
+        <div class="step"><span class="n">5</span><strong>Merge</strong> near-coplanar regions</div>
+        <div class="step"><span class="n">6</span><strong>Project</strong> onto mean plane → JSON</div>
+      </div>
+
+      <div class="block emerald" style="margin-top:18px">
+        <strong>Live preview &nbsp;→</strong> the panel beside this text shows real outputs from <strong>13 contiguous tiles</strong> in dépt 82, coloured by roof azimuth (red = N, cyan = S). Click any roof to inspect its tilt &amp; azimuth.
+      </div>
+    </div>
+
+    <div>
+      <div class="viewer-cap">
+        <div class="label">Live · roof regions extracted from 13 LiDAR tiles · dépt 82</div>
+        <div class="actions">
+          <button type="button" class="fs-btn" data-fs-target="vf-tiles">⛶ fullscreen</button>
+          <a href="viewer-tiles.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
+        </div>
+      </div>
+      <div class="viewer-shell">
+        <iframe id="vf-tiles" class="viewer-frame"
+                src="viewer-tiles.html?embed=1"
+                loading="lazy" allowfullscreen
+                title="Tile JSON viewer"></iframe>
+        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
+        <button type="button" class="fs-corner" data-fs-target="vf-tiles" aria-label="Toggle fullscreen">⛶ fullscreen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 9 — DEPT 82 PRODUCTION RUN
+     ============================================================ -->
+<!-- ============================================================
+     SLIDE 7 — DÉPT 82 RESULTS  +  TILT/AZIMUTH  +  PANEL VIEWER
+     ============================================================ -->
+<section class="slide" id="s-prod">
+  <span class="slide-tag">§ 6 · RESULTS · DÉPT 82</span>
+  <span class="slide-num">07 / 07</span>
+
+  <h2 class="slide-title">First full département: <em>Tarn-et-Garonne.</em></h2>
+  <p class="lede">5 058 panels detected, 99.1 % bound to a roof plane. The map below is the live database overlaid on satellite imagery — colour = azimuth.</p>
+
+  <!-- Compact stat strip -->
+  <div class="row" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div class="stat"><div class="num count" data-target="1641">0</div><div class="unit">tiles processed</div><div class="caption">99.4 % of 1 651 — in 1 h 16 min</div></div>
+    <div class="stat"><div class="num emerald count" data-target="5058">0</div><div class="unit">panels detected</div><div class="caption">across 4 190 buildings</div></div>
+    <div class="stat"><div class="num emerald" style="font-size:36px">99.1<span style="font-size:20px;color:var(--ink-mute)"> %</span></div><div class="unit">have tilt + azimuth</div><div class="caption">3-tier match · nothing dropped</div></div>
+    <div class="stat"><div class="num emerald count" data-target="364301">0</div><div class="unit">m² of true inclined surface</div><div class="caption">+4.0 % vs flat 2D area</div></div>
+  </div>
+
+  <!-- Tilt / azimuth distributions  +  embedded panel viewer -->
+  <div class="row row-40-60" style="gap:24px;align-items:start">
+    <div>
+      <div class="label">Tilt distribution &nbsp;·&nbsp; 5 014 matched panels</div>
+      <div class="chart-wrap short" style="height:180px"><canvas id="chart-tilt"></canvas></div>
+
+      <div class="label" style="margin-top:18px">Azimuth distribution &nbsp;·&nbsp; deg from N</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chart-azimuth"></canvas></div>
+    </div>
+
+    <div>
+      <div class="viewer-cap">
+        <div class="label">Live · panels__82.geojson + panels__82.csv</div>
+        <div class="actions">
+          <button type="button" class="fs-btn" data-fs-target="vf-panels">⛶ fullscreen</button>
+          <a href="viewer-panels.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
+        </div>
+      </div>
+      <div class="viewer-shell">
+        <iframe id="vf-panels" class="viewer-frame" style="height:540px"
+                src="viewer-panels.html?embed=1"
+                loading="lazy" allowfullscreen
+                title="Panel viewer"></iframe>
+        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
+        <button type="button" class="fs-corner" data-fs-target="vf-panels" aria-label="Toggle fullscreen">⛶ fullscreen</button>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ============================================================
+     SCRIPTS
+     ============================================================ -->
+<script>
+/* ------------------------------------------------------------------ */
+/*  Build right-side dot navigator                                     */
+/* ------------------------------------------------------------------ */
+const sections = Array.from(document.querySelectorAll('.slide'));
+const navWrap  = document.getElementById('nav-dots');
+sections.forEach(s => {
+  const a = document.createElement('a');
+  a.href = '#' + s.id;
+  a.title = s.querySelector('.slide-tag')?.textContent || s.id;
+  navWrap.appendChild(a);
+});
+const navLinks = Array.from(navWrap.children);
+const ioNav = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      const idx = sections.indexOf(e.target);
+      navLinks.forEach((l,i)=> l.classList.toggle('active', i===idx));
+    }
+  });
+}, { threshold: 0.5 });
+sections.forEach(s => ioNav.observe(s));
+
+/* ------------------------------------------------------------------ */
+/*  Keyboard nav: ←/→ ↑/↓ PgUp/PgDn                                    */
+/* ------------------------------------------------------------------ */
+const deck = document.getElementById('deck');
+function goRel(d){
+  const cur = sections.findIndex(s=>{
+    const r = s.getBoundingClientRect();
+    return r.top >= -window.innerHeight*0.35 && r.top < window.innerHeight*0.65;
+  });
+  const next = Math.max(0, Math.min(sections.length-1, cur+d));
+  sections[next].scrollIntoView({ behavior:'smooth' });
+}
+document.addEventListener('keydown', e=>{
+  // While a viewer iframe is fullscreen we hand the keyboard to it
+  // (so map pan/zoom keys work, and Esc exits fullscreen via the browser).
+  if(document.fullscreenElement) return;
+  if(['ArrowDown','ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); goRel(+1); }
+  if(['ArrowUp','ArrowLeft','PageUp'].includes(e.key))         { e.preventDefault(); goRel(-1); }
+  if(e.key === 'Home'){ sections[0].scrollIntoView({behavior:'smooth'}); }
+  if(e.key === 'End') { sections[sections.length-1].scrollIntoView({behavior:'smooth'}); }
+});
+
+/* ------------------------------------------------------------------ */
+/*  Viewer fullscreen — native Fullscreen API                          */
+/* ------------------------------------------------------------------ */
+function toggleViewerFullscreen(targetId){
+  const el = document.getElementById(targetId);
+  if(!el) return;
+  if(document.fullscreenElement){
+    document.exitFullscreen?.();
+  } else {
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    req?.call(el).catch(err => console.warn('Fullscreen failed:', err));
+  }
+}
+document.querySelectorAll('[data-fs-target]').forEach(btn => {
+  btn.addEventListener('click', () => toggleViewerFullscreen(btn.dataset.fsTarget));
+});
+
+/* ------------------------------------------------------------------ */
+/*  Counter animation — fires when stat enters viewport                 */
+/* ------------------------------------------------------------------ */
+function animateCount(el){
+  const target = parseFloat(el.dataset.target);
+  const prefix = el.dataset.prefix || '';
+  const suffix = el.dataset.suffix || '';
+  const dur    = 1200;
+  const t0     = performance.now();
+  const isInt  = Number.isInteger(target);
+  function tick(t){
+    const k = Math.min(1, (t - t0)/dur);
+    const eased = 1 - Math.pow(1-k, 3);
+    const v = target * eased;
+    el.textContent = prefix + (isInt ? Math.round(v).toLocaleString('en-US').replace(/,/g,' ') : v.toFixed(1)) + suffix;
+    if(k < 1) requestAnimationFrame(tick);
+    else el.textContent = prefix + (isInt ? Math.round(target).toLocaleString('en-US').replace(/,/g,' ') : target.toFixed(1)) + suffix;
+  }
+  requestAnimationFrame(tick);
+}
+const ioCount = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting && !e.target.dataset.fired){
+      e.target.dataset.fired = '1';
+      animateCount(e.target);
+    }
+  });
+}, { threshold: 0.5 });
+document.querySelectorAll('.count').forEach(el => ioCount.observe(el));
+
+/* ------------------------------------------------------------------ */
+/*  Charts — Chart.js                                                   */
+/* ------------------------------------------------------------------ */
+Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+Chart.defaults.font.size   = 12;
+Chart.defaults.color       = '#4A4A4A';
+Chart.defaults.borderColor = '#D9DCE0';
+
+const NAVY    = '#1F4E79';
+const NAVY_30 = 'rgba(31,78,121,.30)';
+const NAVY_60 = 'rgba(31,78,121,.60)';
+const EMERALD = '#2E7D32';
+const EMERALD_30 = 'rgba(46,125,50,.30)';
+const EMERALD_60 = 'rgba(46,125,50,.60)';
+const GRAY    = '#B8B8B8';
+const WARN    = '#C62828';
+
+const baseOpts = {
+  responsive:true, maintainAspectRatio:false,
+  animation:{ duration:1200, easing:'easeOutQuart' },
+  plugins:{
+    legend:{ labels:{ usePointStyle:true, boxWidth:8, color:'#1A1A1A', font:{size:12} } },
+    tooltip:{ backgroundColor:'#1F4E79', titleFont:{weight:'600'}, bodyFont:{weight:'400'}, padding:10, cornerRadius:3, displayColors:false }
+  },
+  scales:{}
+};
+
+/* --- TILT histogram  (5 014 matched panels, dépt 82) -------------- */
+new Chart(document.getElementById('chart-tilt'), {
+  type:'bar',
+  data:{
+    labels:['0–5°','5–10°','10–15°','15–20°','20–25°','25–30°','30–35°','35–40°','40°+'],
+    datasets:[{
+      label:'panels',
+      data:[158, 183, 573, 3113, 740, 177, 50, 15, 5],
+      backgroundColor:(ctx)=>{
+        const peak = 3113;
+        const v = ctx.parsed?.y ?? ctx.raw ?? 0;
+        const k = Math.min(1, v/peak);
+        return `rgba(46,125,50,${0.20 + 0.65*k})`;
+      },
+      borderColor: EMERALD,
+      borderWidth:1, borderRadius:2, barPercentage:0.92, categoryPercentage:0.92
+    }]
+  },
+  options:{ ...baseOpts,
+    plugins:{ ...baseOpts.plugins, legend:{display:false},
+      tooltip:{ ...baseOpts.plugins.tooltip,
+        callbacks:{ label:(c)=>` ${c.parsed.y.toLocaleString('en-US').replace(/,/g,' ')} panels` }
+      }
+    },
+    scales:{
+      x:{ grid:{display:false}, ticks:{font:{size:10}} },
+      y:{ grid:{color:'#ECEFF3'}, ticks:{font:{size:10}} }
+    }
+  }
+});
+
+/* --- AZIMUTH polar area (16 cardinal sectors) --------------------- */
+new Chart(document.getElementById('chart-azimuth'), {
+  type:'polarArea',
+  data:{
+    labels:['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'],
+    datasets:[{
+      data:[27, 35, 56, 60, 121, 350, 617, 771, 749, 799, 705, 353, 182, 87, 54, 48],
+      backgroundColor:[
+        'hsla(0,75%,55%,0.55)',  'hsla(22,75%,55%,0.55)','hsla(45,75%,55%,0.55)','hsla(67,75%,55%,0.55)',
+        'hsla(90,75%,55%,0.55)', 'hsla(112,75%,55%,0.55)','hsla(135,75%,55%,0.55)','hsla(157,75%,55%,0.55)',
+        'hsla(180,70%,50%,0.70)','hsla(202,70%,50%,0.65)','hsla(225,75%,55%,0.55)','hsla(247,75%,55%,0.55)',
+        'hsla(270,75%,55%,0.55)','hsla(292,75%,55%,0.55)','hsla(315,75%,55%,0.55)','hsla(337,75%,55%,0.55)'
+      ],
+      borderColor:'#fff', borderWidth:1.4
+    }]
+  },
+  options:{ ...baseOpts,
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ ...baseOpts.plugins.tooltip,
+        callbacks:{ label:(c)=>` ${c.label}: ${c.parsed.r.toLocaleString('en-US').replace(/,/g,' ')} panels` }
+      }
+    },
+    scales:{
+      r:{
+        startAngle:-11.25,
+        ticks:{ display:false, backdropColor:'transparent' },
+        grid:{ color:'#ECEFF3' },
+        pointLabels:{ display:true, font:{size:11}, color:'#4A4A4A' },
+        angleLines:{ color:'#ECEFF3' }
+      }
+    }
+  }
+});
+
+</script>
+</body>
+</html>
