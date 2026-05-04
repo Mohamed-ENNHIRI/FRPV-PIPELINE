@@ -372,6 +372,46 @@
                     paint: { 'line-color': '#0e7490', 'line-width': 1, 'line-opacity': 0.95 }
                 });
 
+                // Département 82 administrative boundary.
+                // Added AFTER the panels so the panel source/layer order is
+                // identical to the original (no timing changes).
+                // The two boundary layers are inserted *before* 'panels-fill'
+                // via the beforeId argument, so panels still render on top.
+                try {
+                    map.addSource('dept-boundary', {
+                        type: 'geojson',
+                        data: { type: 'FeatureCollection', features: [] }
+                    });
+                    map.addLayer({
+                        id: 'dept-boundary-fill',
+                        type: 'fill', source: 'dept-boundary',
+                        paint: { 'fill-color': '#1F4E79', 'fill-opacity': 0.04 }
+                    }, 'panels-fill');
+                    map.addLayer({
+                        id: 'dept-boundary-line',
+                        type: 'line', source: 'dept-boundary',
+                        paint: {
+                            'line-color': '#fbbf24',
+                            'line-width': 2.2,
+                            'line-opacity': 0.95,
+                            'line-dasharray': [4, 3]
+                        }
+                    }, 'panels-fill');
+                    fetch('data/dept82_boundary.geojson')
+                        .then(r => r.ok ? r.json() : null)
+                        .then(geo => {
+                            if (!geo || !map.getSource('dept-boundary')) return;
+                            const fc = geo.type === 'FeatureCollection'
+                                ? geo
+                                : { type: 'FeatureCollection', features: [geo] };
+                            map.getSource('dept-boundary').setData(fc);
+                        })
+                        .catch(err => console.warn('dept boundary not loaded:', err));
+                } catch (err) {
+                    // Never let a boundary failure stop the panel viewer.
+                    console.warn('dept boundary setup failed:', err);
+                }
+
                 map.addSource('panel-selected', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
                 map.addLayer({
                     id: 'panel-selected-line', type: 'line', source: 'panel-selected',
@@ -553,9 +593,23 @@
             document.getElementById('stat-surface').textContent = formatSurface(totalSurface);
             document.getElementById('stat-tilt').textContent = tiltN > 0 ? (tiltSum / tiltN).toFixed(1) + '°' : '—';
 
-            if (map && map.getSource('panels')) {
-                map.getSource('panels').setData({ type: 'FeatureCollection', features });
-                setTimeout(() => fitToData(), 200);
+            // Push to the map. If the source isn't registered yet (a known
+            // race vs. map.on('load')), retry until it is — the data has
+            // already been computed, no work is wasted.
+            const pushToMap = () => {
+                if (map && map.getSource('panels')) {
+                    map.getSource('panels').setData({ type: 'FeatureCollection', features });
+                    setTimeout(() => fitToData(), 200);
+                    return true;
+                }
+                return false;
+            };
+            if (!pushToMap()) {
+                console.warn('panels source not ready yet, retrying...');
+                const retry = setInterval(() => {
+                    if (pushToMap()) clearInterval(retry);
+                }, 80);
+                setTimeout(() => clearInterval(retry), 8000); // give up after 8 s
             }
 
             document.getElementById('drop-zone').classList.add('hidden');
@@ -641,18 +695,66 @@
         initMap();
 
         // --- Auto-load bundled dépt-82 panel data --------------------
+        // Resolves once the map's 'load' event has fired and the
+        // 'panels' source/layer have been registered inside the load handler.
+        const mapReady = new Promise(resolve => {
+            if (map && map.loaded && map.loaded() && map.getSource && map.getSource('panels')) {
+                resolve();
+            } else {
+                const t = setInterval(() => {
+                    if (map && map.getSource && map.getSource('panels')) {
+                        clearInterval(t); resolve();
+                    }
+                }, 50);
+                // safety net: also resolve on the explicit load event
+                if (map) map.on('load', () => { clearInterval(t); resolve(); });
+            }
+        });
+
+        // Tiny status pill so the user (and us) can see what's happening
+        // without having to open the dev console. Visible only briefly.
+        function showStatus(msg, level){
+            let el = document.getElementById('viewer-status');
+            if (!el) {
+                el = document.createElement('div');
+                el.id = 'viewer-status';
+                el.style.cssText =
+                  'position:absolute;top:10px;left:50%;transform:translateX(-50%);'
+                + 'z-index:60;font-family:JetBrains Mono,monospace;font-size:11px;'
+                + 'padding:6px 12px;border-radius:4px;background:#0F172A;'
+                + 'color:#fff;border:1px solid rgba(255,255,255,.18);'
+                + 'backdrop-filter:blur(6px);max-width:80%;text-align:center;'
+                + 'transition:opacity .3s ease;opacity:0;';
+                document.body.appendChild(el);
+            }
+            el.textContent = msg;
+            if (level === 'err')  el.style.borderColor = '#C62828';
+            if (level === 'ok')   el.style.borderColor = '#2E7D32';
+            if (level === 'wait') el.style.borderColor = '#fbbf24';
+            el.style.opacity = '1';
+            // auto-fade success after a moment
+            if (level === 'ok'){
+                clearTimeout(el._t);
+                el._t = setTimeout(() => { el.style.opacity = '0'; }, 4000);
+            }
+        }
+
         async function autoLoadPanels(){
             const overlay = document.getElementById('loading-overlay');
             const loadingText = document.getElementById('loading-text');
             try{
                 overlay.classList.remove('hidden');
                 loadingText.textContent = 'Fetching panels__82.geojson + panels__82.csv ...';
+                showStatus('fetching panel data…', 'wait');
+
                 const [g, c] = await Promise.all([
                     fetch('data/panels__82.geojson'),
                     fetch('data/panels__82.csv')
                 ]);
                 if(!g.ok || !c.ok){
-                    loadingText.textContent = 'Bundled data missing — drop files in.';
+                    const msg = `data missing: geojson=${g.status} csv=${c.status}`;
+                    loadingText.textContent = msg + ' — drop files in.';
+                    showStatus(msg, 'err');
                     return;
                 }
                 const [gBlob, cBlob] = await Promise.all([g.blob(), c.blob()]);
@@ -660,10 +762,16 @@
                     new File([gBlob], 'panels__82.geojson', { type:'application/geo+json' }),
                     new File([cBlob], 'panels__82.csv',     { type:'text/csv' })
                 ];
+
+                showStatus('waiting for the map to be ready…', 'wait');
+                await mapReady;   // <-- the actual fix: ensure 'panels' source exists
                 document.getElementById('drop-zone').classList.add('hidden');
-                handleFiles(files);
+                showStatus('joining 5 058 panels…', 'wait');
+                await handleFiles(files);
+                showStatus('panels rendered ✓ (click the map to dismiss)', 'ok');
             } catch(err){
                 console.error('autoLoadPanels error', err);
+                showStatus('autoload failed: ' + (err.message || err), 'err');
                 overlay.classList.add('hidden');
             }
         }

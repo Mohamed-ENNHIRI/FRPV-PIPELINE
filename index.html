@@ -391,6 +391,60 @@
     100% { width:0;    background:var(--emerald); }
   }
 
+  /* ---------- 7-step extraction methodology slide ---------- */
+  .meth-row{
+    display:grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap:10px;
+    margin-top:20px;
+  }
+  .meth-card{
+    display:flex; flex-direction:column;
+    border:1px solid var(--rule-soft); border-radius:4px;
+    background:#fff; overflow:hidden; min-width:0;
+  }
+  .meth-card .head{
+    display:flex; align-items:center; gap:6px;
+    padding:6px 8px; background:var(--navy); color:#fff;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px; letter-spacing:.06em;
+  }
+  .meth-card .head .n{
+    width:18px;height:18px;border-radius:50%;
+    background:#fff;color:var(--navy);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700; font-size:10px; flex:0 0 auto;
+  }
+  .meth-card .fig{
+    aspect-ratio: 4 / 3;
+    background:var(--tint); display:flex;align-items:center;justify-content:center;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .meth-card .fig svg{ width:100%; height:100%; display:block; }
+  .meth-card .body{
+    padding:8px 9px 10px;
+    display:flex; flex-direction:column; gap:6px;
+    flex:1;
+  }
+  .meth-card .body .t{
+    font-size:11.5px; font-weight:600; color:var(--ink); line-height:1.25;
+    min-height:2.5em;
+  }
+  .meth-card .body .eq{
+    font-size:10px; color:var(--ink-soft); line-height:1.3;
+    overflow:hidden;
+  }
+  .meth-card .body .eq .katex { font-size:.95em; }
+  /* connector arrows between cards */
+  .meth-row .meth-card { position:relative; }
+  .meth-row .meth-card:not(:last-child)::after{
+    content: "→";
+    position:absolute; top:30%; right:-8px;
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    color:var(--rule); z-index:2;
+    background:var(--paper); padding:0 1px;
+  }
+
   /* Big problem-stat block (slide 3) */
   .big-stat{
     display:flex; flex-direction:column; gap:6px; padding:28px 32px;
@@ -427,36 +481,72 @@
      ============================================================ -->
 <section class="slide" id="s-title" data-tag="lidar_loop · may 2026">
   <span class="slide-tag">LIDAR_LOOP · MAY 2026</span>
-  <span class="slide-num">01 / 07</span>
+  <span class="slide-num">01 / 08</span>
 
-  <div style="max-width:1100px">
+  <div style="max-width:1180px">
     <div class="label">Research presentation</div>
     <h1 class="deck-title">National PV Roof Database</h1>
-    <p style="font-family:'Crimson Pro',Georgia,serif;font-style:italic;font-size:24px;color:var(--ink-soft);margin:0 0 32px;">
-      From IGN LiDAR HD to per-panel records — pipeline, time, and storage<br>
-      <span style="font-size:18px;">illustrated with département 82 (Tarn-et-Garonne)</span>
+    <p style="font-family:'Crimson Pro',Georgia,serif;font-style:italic;font-size:22px;color:var(--ink-soft);margin:0 0 22px;">
+      Building, from open public data, the first uniform inventory of every<br>
+      photovoltaic panel on French rooftops — automatically, at national scale.
     </p>
 
-    <div class="row row-3" style="gap:24px;margin-top:36px">
+    <!-- ========== RESEARCH AIM (the "why") ========== -->
+    <div class="card accent-l emerald" style="padding:18px 22px;background:var(--emerald-10);border-left-width:4px;margin-bottom:24px">
+      <div class="label" style="color:var(--emerald)">Research aim</div>
+      <p style="margin:6px 0 0;font-size:16px;color:var(--ink);line-height:1.55">
+        Today, France has <strong>no single, geo-referenced source of truth</strong> describing where rooftop PV is installed,
+        how each panel is oriented, and how much surface it covers.
+        Existing registries (ENEDIS, BDPV, Open&nbsp;Power System Data) are either
+        <em>address-level</em>, <em>declarative</em>, or <em>incomplete</em> — none of them tells a researcher,
+        for a given roof, the panel's exact position, tilt and azimuth.
+        This work fills that gap.
+      </p>
+    </div>
+
+    <!-- ========== Three concrete contributions ========== -->
+    <div class="row row-3" style="gap:18px;margin-bottom:22px">
+      <div class="card accent-l">
+        <div class="label">① &nbsp; Open dataset</div>
+        <p style="margin:4px 0 0;font-size:14px;color:var(--ink-soft);line-height:1.5">
+          A reproducible, per-panel database covering all <strong>96 metropolitan départements</strong> — <em>position · tilt · azimuth · area · provenance</em>.
+        </p>
+      </div>
+      <div class="card accent-l">
+        <div class="label">② &nbsp; Tractable pipeline</div>
+        <p style="margin:4px 0 0;font-size:14px;color:var(--ink-soft);line-height:1.5">
+          A fully open-source, single-machine pipeline that turns <strong>~90 TB of public LiDAR</strong> into a queryable database in <strong>3–5 days</strong>.
+        </p>
+      </div>
+      <div class="card accent-l">
+        <div class="label">③ &nbsp; Research enablement</div>
+        <p style="margin:4px 0 0;font-size:14px;color:var(--ink-soft);line-height:1.5">
+          Plugs directly into <em>solar-yield modelling</em>, <em>grid-impact studies</em>, <em>policy evaluation</em> and <em>self-consumption</em> analysis — the kind of question that needs panel-level geometry.
+        </p>
+      </div>
+    </div>
+
+    <!-- ========== Inputs / Pipeline / Output ========== -->
+    <div class="row row-3" style="gap:18px">
       <div class="card accent-l">
         <div class="label">Inputs</div>
         <ul class="tight">
-          <li>IGN LiDAR HD (national point cloud)</li>
-          <li>Cadastre Etalab</li>
-          <li>BDOrtho 20&nbsp;cm imagery</li>
+          <li>IGN LiDAR HD (national 3D point cloud)</li>
+          <li>Cadastre Etalab (building footprints)</li>
+          <li>BDOrtho 20&nbsp;cm aerial imagery</li>
           <li>PV-presence model scores</li>
         </ul>
       </div>
       <div class="card accent-l">
-        <div class="label">Pipeline</div>
+        <div class="label">3-stage pipeline</div>
         <ul class="tight">
-          <li><strong>Stage 1 · Index</strong> &nbsp;tile selection</li>
-          <li><strong>Stage 2 · Segment</strong> &nbsp;LiDAR roof planes</li>
-          <li><strong>Stage 3 · Assign</strong> &nbsp;panels &rarr; planes</li>
+          <li><strong>Index</strong> &nbsp;decide which tiles to fetch</li>
+          <li><strong>Segment</strong> &nbsp;extract roof planes (tilt&nbsp;/&nbsp;az.)</li>
+          <li><strong>Assign</strong> &nbsp;bind detected panels to planes</li>
         </ul>
       </div>
       <div class="card accent-l emerald">
-        <div class="label">Output schema (per panel)</div>
+        <div class="label">Output (per panel)</div>
         <ul class="tight">
           <li>lon / lat (WGS-84), area<sub>m²</sub></li>
           <li>tilt &amp; azimuth (deg)</li>
@@ -464,6 +554,10 @@
         </ul>
       </div>
     </div>
+
+    <p style="font-family:'Crimson Pro',Georgia,serif;font-style:italic;font-size:14px;color:var(--ink-mute);margin:16px 0 0;text-align:center">
+      Pilot &amp; calibration: département 82 — Tarn-et-Garonne &nbsp;·&nbsp; 5 058 panels detected &nbsp;·&nbsp; 364 301&nbsp;m² of inclined surface
+    </p>
   </div>
 
   <div class="scroll-hint">↓ &nbsp; scroll &nbsp; or &nbsp; press → &nbsp;</div>
@@ -475,7 +569,7 @@
      ============================================================ -->
 <section class="slide" id="s-goal">
   <span class="slide-tag">§ 1 · GOAL</span>
-  <span class="slide-num">02 / 07</span>
+  <span class="slide-num">02 / 08</span>
 
   <h2 class="slide-title">Map every solar panel in France — <em>automatically.</em></h2>
   <p class="lede">From open public data we build a single, queryable catalogue of every photovoltaic panel installed on French rooftops.</p>
@@ -504,11 +598,557 @@
 
 
 <!-- ============================================================
-     SLIDE 3 — THE PROBLEM  (size + time in one slide)
+     SLIDE 3 — PIPELINE OVERVIEW (ANIMATED SVG)
+     ============================================================ -->
+<section class="slide" id="s-pipeline">
+  <span class="slide-tag">§ 2 · PIPELINE OVERVIEW</span>
+  <span class="slide-num">03 / 08</span>
+
+  <h2 class="slide-title">3 stages, animated.</h2>
+  <p class="lede">Top row: stage 0 indexes the active tiles; stage 1 downloads &amp; segments roofs from LiDAR. Bottom row: stage 2a predicts panel masks from imagery; stage 2b binds each panel to a roof plane. LAZ files are deleted as soon as each tile's JSON is written.</p>
+
+  <div style="width:100%;max-width:1500px;margin:0 auto">
+    <svg viewBox="0 0 1500 540" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="3-stage pipeline">
+      <defs>
+        <marker id="arrh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--navy)"/>
+        </marker>
+        <marker id="arrh-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rule)"/>
+        </marker>
+        <marker id="arrh-em" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--emerald)"/>
+        </marker>
+      </defs>
+
+      <!-- Stage band tints -->
+      <rect x="0"    y="40" width="380" height="460" fill="var(--tint)" rx="3"/>
+      <rect x="395"  y="40" width="650" height="460" fill="var(--tint)" rx="3"/>
+      <rect x="1060" y="40" width="440" height="460" fill="var(--tint)" rx="3"/>
+
+      <!-- Band labels -->
+      <text x="190" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 1 · INDEX</text>
+      <text x="720" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 2 · SEGMENT</text>
+      <text x="1280" y="65" text-anchor="middle" fill="var(--navy)" font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 3 · ASSIGN</text>
+
+      <!-- Inputs (Stage 1) -->
+      <g class="input">
+        <rect x="20"  y="120" width="160" height="40" rx="3"/><text x="100" y="143" text-anchor="middle" font-weight="600">PV scores</text>
+        <rect x="20"  y="190" width="160" height="40" rx="3"/><text x="100" y="213" text-anchor="middle" font-weight="600">Cadastre</text>
+        <rect x="20"  y="260" width="160" height="40" rx="3"/><text x="100" y="283" text-anchor="middle" font-weight="600">IGN WFS</text>
+      </g>
+
+      <!-- Stage 0 -->
+      <g class="stage s1">
+        <rect x="220" y="180" width="150" height="60" rx="4"/>
+        <text x="295" y="216" text-anchor="middle" font-size="15">Stage 0</text>
+      </g>
+
+      <!-- SQLite store -->
+      <g class="store">
+        <path d="M 220 320
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="270" cy="320" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="270" y="357" text-anchor="middle">SQLite queue</text>
+      </g>
+
+      <!-- Stage 1 -->
+      <g class="stage s2">
+        <rect x="430" y="120" width="180" height="56" rx="4"/>
+        <text x="520" y="155" text-anchor="middle" font-size="15">Stage 1</text>
+      </g>
+
+      <!-- LAZ buffer (transient) -->
+      <g class="transient">
+        <rect x="640" y="125" width="170" height="46" rx="3"/>
+        <text x="725" y="147" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-mute)">LAZ buffer (transient)</text>
+        <text x="725" y="161" text-anchor="middle" font-size="10">≤ 60 tiles · ≤ 15 GB</text>
+      </g>
+
+      <!-- Engine v2 -->
+      <g>
+        <rect x="430" y="220" width="380" height="120" rx="4" fill="var(--navy-08)" stroke="var(--navy)" stroke-width="0.7"/>
+        <text x="620" y="245" text-anchor="middle" font-family="Inter" font-weight="700" fill="var(--navy)" font-size="13">Segmentation engine v2 — per LAZ tile, per building</text>
+        <text x="620" y="270" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">clip class-6 → cadastre · voxel 1 m · 2D Delaunay</text>
+        <text x="620" y="288" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">region-grow normals (cos 8°) · merge coplanar (cos 3°)</text>
+        <text x="620" y="306" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">project on mean plane → JSON</text>
+      </g>
+
+      <!-- Per-tile JSONs -->
+      <g class="store">
+        <path d="M 870 240
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="920" cy="240" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="920" y="277" text-anchor="middle">Per-tile JSONs</text>
+      </g>
+
+      <!-- BDOrtho input -->
+      <g class="input">
+        <rect x="1080" y="125" width="170" height="46" rx="3"/>
+        <text x="1165" y="153" text-anchor="middle" font-weight="600">BDOrtho 20 cm</text>
+      </g>
+
+      <!-- Stage 2a -->
+      <g class="stage s3">
+        <rect x="1100" y="200" width="160" height="56" rx="4"/>
+        <text x="1180" y="234" text-anchor="middle" font-size="15">Stage 2a</text>
+      </g>
+
+      <!-- Panel polygons store -->
+      <g class="store">
+        <path d="M 1310 200
+                 a 50 9 0 0 0 100 0
+                 v 50
+                 a 50 9 0 0 1 -100 0 z" />
+        <ellipse cx="1360" cy="200" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
+        <text x="1360" y="237" text-anchor="middle">Panel polygons</text>
+      </g>
+
+      <!-- Stage 2b -->
+      <g class="stage s3">
+        <rect x="1100" y="320" width="160" height="56" rx="4"/>
+        <text x="1180" y="354" text-anchor="middle" font-size="15">Stage 2b</text>
+      </g>
+
+      <!-- Panel database (final) -->
+      <g class="store">
+        <path d="M 1310 320
+                 a 50 9 0 0 0 100 0
+                 v 70
+                 a 50 9 0 0 1 -100 0 z" fill="var(--emerald-10)"/>
+        <ellipse cx="1360" cy="320" rx="50" ry="9" fill="var(--emerald-10)" stroke="var(--emerald)" stroke-width="1.2"/>
+        <text x="1360" y="365" text-anchor="middle" font-weight="700" font-size="12">Panel database</text>
+        <text x="1360" y="380" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">SQLite · GeoJSON · CSV</text>
+      </g>
+
+      <!-- Arrows: animated data flow -->
+      <path class="arrow flow" d="M 180 140 L 220 195"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 180 210 L 220 210"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 180 280 L 220 230"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 295 240 L 295 311"  marker-end="url(#arrh-em)"/>
+      <path class="arrow flow" d="M 320 345 L 430 148"  marker-end="url(#arrh)"/>
+      <path class="arrow"      d="M 610 148 L 640 148"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 725 175 L 620 220"  marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 810 280 L 870 268"  marker-end="url(#arrh-em)"/>
+
+      <!-- Stage 2a arrows -->
+      <path class="arrow flow" d="M 1165 175 L 1165 200" marker-end="url(#arrh)"/>
+      <path class="arrow flow" d="M 1260 225 L 1310 220" marker-end="url(#arrh-em)"/>
+
+      <!-- Cross-stage: JSONs -> Stage 2b -->
+      <path class="arrow flow" d="M 970 270 C 1040 280, 1040 350, 1100 348" marker-end="url(#arrh)"/>
+
+      <!-- Panel polygons -> Stage 2b -->
+      <path class="arrow flow" d="M 1360 256 C 1360 290, 1260 305, 1230 320" marker-end="url(#arrh)"/>
+
+      <!-- Stage 2b -> final DB -->
+      <path class="arrow flow" d="M 1260 348 L 1310 348" marker-end="url(#arrh-em)"/>
+    </svg>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 5 — STAGE 0 (INDEX)
+     ============================================================ -->
+
+
+<!-- ============================================================
+     SLIDE 4 — EXTRACTION METHODOLOGY (7 mini steps)
+     ============================================================ -->
+<section class="slide" id="s-methodology">
+  <span class="slide-tag">§ 3 · EXTRACTION METHODOLOGY</span>
+  <span class="slide-num">04 / 08</span>
+
+  <h2 class="slide-title">From <em>3D point cloud</em> to <em>georeferenced roof planes</em>, in 7 steps.</h2>
+  <p class="lede">Each LiDAR tile passes through the same deterministic algorithm. Below: every step, its key formula, and a schematic of what it does.</p>
+
+  <div class="meth-row">
+
+    <!-- ============ STEP 1 — Semantic filtration =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">1</div>FILTER</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" aria-label="ASPRS class 6 selection">
+          <!-- mixed cloud -->
+          <g fill="#B8B8B8" opacity="0.6">
+            <circle cx="10" cy="70" r="0.9"/><circle cx="22" cy="73" r="0.9"/><circle cx="34" cy="71" r="0.9"/>
+            <circle cx="48" cy="74" r="0.9"/><circle cx="62" cy="72" r="0.9"/><circle cx="78" cy="74" r="0.9"/>
+            <circle cx="94" cy="73" r="0.9"/><circle cx="108" cy="74" r="0.9"/>
+            <circle cx="14" cy="60" r="0.9"/><circle cx="100" cy="58" r="0.9"/><circle cx="6" cy="78" r="0.9"/>
+            <circle cx="116" cy="80" r="0.9"/>
+          </g>
+          <!-- buildings highlighted -->
+          <g fill="#1F4E79">
+            <circle cx="32" cy="48" r="1.4"/><circle cx="40" cy="42" r="1.4"/><circle cx="48" cy="36" r="1.4"/>
+            <circle cx="56" cy="32" r="1.4"/><circle cx="64" cy="36" r="1.4"/><circle cx="72" cy="42" r="1.4"/>
+            <circle cx="80" cy="48" r="1.4"/>
+            <circle cx="34" cy="54" r="1.4"/><circle cx="42" cy="48" r="1.4"/><circle cx="50" cy="42" r="1.4"/>
+            <circle cx="58" cy="38" r="1.4"/><circle cx="66" cy="42" r="1.4"/><circle cx="74" cy="48" r="1.4"/>
+            <circle cx="78" cy="54" r="1.4"/>
+          </g>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">class 6 = buildings</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Semantic filtration</div>
+        <div class="eq">$\mathcal{B} = \{\,p \in \mathcal{P} : \mathrm{class}(p) = 6\,\}$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 2 — Voxel hashing (canopy apex) =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">2</div>VOXELIZE</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+          <!-- voxel grid -->
+          <g stroke="#B8B8B8" stroke-width="0.5" fill="none">
+            <rect x="14" y="48" width="20" height="20"/>
+            <rect x="34" y="48" width="20" height="20"/>
+            <rect x="54" y="48" width="20" height="20"/>
+            <rect x="74" y="48" width="20" height="20"/>
+            <rect x="94" y="48" width="14" height="20"/>
+          </g>
+          <!-- points (lower discarded grey, top kept) -->
+          <g fill="#B8B8B8">
+            <circle cx="20" cy="62" r="1"/><circle cx="28" cy="60" r="1"/>
+            <circle cx="40" cy="58" r="1"/><circle cx="48" cy="64" r="1"/>
+            <circle cx="60" cy="62" r="1"/><circle cx="68" cy="58" r="1"/>
+            <circle cx="80" cy="60" r="1"/><circle cx="88" cy="62" r="1"/>
+            <circle cx="98" cy="60" r="1"/><circle cx="104" cy="64" r="1"/>
+          </g>
+          <!-- highest-Z per cell -->
+          <g fill="#2E7D32">
+            <circle cx="22" cy="50" r="1.6"/>
+            <circle cx="44" cy="50" r="1.6"/>
+            <circle cx="62" cy="50" r="1.6"/>
+            <circle cx="84" cy="50" r="1.6"/>
+            <circle cx="100" cy="50" r="1.6"/>
+          </g>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#2E7D32" font-weight="600">max Z per 1m cell</text>
+          <text x="60" y="83" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#6B7280">2.5D canopy</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Voxel-based hashing</div>
+        <div class="eq">$C_{q_x,q_y} = \arg\max_{p}\, Z(p)$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 3 — Constrained Delaunay =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">3</div>TRIANGULATE</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+          <!-- kept triangles -->
+          <g stroke="#1F4E79" stroke-width="0.7" fill="rgba(31,78,121,0.08)">
+            <polygon points="20,68 38,40 56,68"/>
+            <polygon points="38,40 56,68 56,40"/>
+            <polygon points="56,40 56,68 74,40"/>
+            <polygon points="56,68 74,40 74,68"/>
+            <polygon points="74,40 74,68 92,68"/>
+          </g>
+          <!-- discarded long-edge -->
+          <g stroke="#C62828" stroke-width="0.7" stroke-dasharray="2 2" fill="rgba(198,40,40,0.05)">
+            <polygon points="20,68 92,68 56,80"/>
+          </g>
+          <!-- vertices -->
+          <g fill="#0F172A">
+            <circle cx="20" cy="68" r="1.2"/><circle cx="38" cy="40" r="1.2"/>
+            <circle cx="56" cy="40" r="1.2"/><circle cx="56" cy="68" r="1.2"/>
+            <circle cx="74" cy="40" r="1.2"/><circle cx="74" cy="68" r="1.2"/>
+            <circle cx="92" cy="68" r="1.2"/>
+          </g>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">2D Delaunay + filter</text>
+          <text x="55" y="84" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#C62828">long edge ⇒ pruned</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Constrained Delaunay</div>
+        <div class="eq">$L \le \sqrt{4.5}\,\mathrm{m},\;|\Delta z| < 1.5\,\mathrm{m}$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 4 — Region growing =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">4</div>GROW</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+          <!-- region A: south-facing -->
+          <g stroke="#fff" stroke-width="0.8">
+            <polygon points="22,66 40,40 58,66" fill="hsl(180,55%,55%)" fill-opacity="0.85"/>
+            <polygon points="40,40 58,66 58,40" fill="hsl(180,55%,55%)" fill-opacity="0.85"/>
+          </g>
+          <!-- region B: west-facing -->
+          <g stroke="#fff" stroke-width="0.8">
+            <polygon points="58,40 76,40 76,66" fill="hsl(270,55%,55%)" fill-opacity="0.85"/>
+            <polygon points="58,66 58,40 76,66" fill="hsl(270,55%,55%)" fill-opacity="0.85"/>
+            <polygon points="76,40 94,66 76,66" fill="hsl(270,55%,55%)" fill-opacity="0.85"/>
+          </g>
+          <!-- BFS arrows -->
+          <g stroke="#0F172A" stroke-width="0.6" fill="none" marker-end="url(#mh)">
+            <path d="M 35 55 L 48 55"/>
+            <path d="M 64 55 L 80 55"/>
+          </g>
+          <defs>
+            <marker id="mh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L10 5 L0 10 z" fill="#0F172A"/>
+            </marker>
+          </defs>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">BFS · normal similarity</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Region growing</div>
+        <div class="eq">$\vec{n}_i\!\cdot\!\vec{n}_j \ge \cos 8°$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 5 — Topological rectification =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">5</div>MERGE</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+          <!-- before / after split -->
+          <g stroke="#fff" stroke-width="0.6">
+            <!-- BEFORE: two near-coplanar but distinct regions -->
+            <polygon points="14,60 40,38 40,60" fill="hsl(180,55%,55%)" fill-opacity="0.85"/>
+            <polygon points="40,60 40,38 56,38 56,60" fill="hsl(176,55%,55%)" fill-opacity="0.85"/>
+            <!-- AFTER: merged -->
+            <polygon points="68,60 94,38 110,38 110,60" fill="hsl(178,55%,55%)" fill-opacity="0.95"/>
+          </g>
+          <!-- arrow between -->
+          <g stroke="#0F172A" stroke-width="0.6" fill="none" marker-end="url(#mh2)">
+            <path d="M 58 50 L 66 50"/>
+          </g>
+          <defs>
+            <marker id="mh2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L10 5 L0 10 z" fill="#0F172A"/>
+            </marker>
+          </defs>
+          <text x="35" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#6B7280">2 regions</text>
+          <text x="89" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="6" fill="#2E7D32">merged</text>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">|R| ≥ 25, Δθ ≤ 3°</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Topological rectification</div>
+        <div class="eq">$\Delta\theta_{adj} \le 3°$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 6 — CRS reprojection =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">6</div>REPROJECT</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+          <!-- left: cartesian grid (Lambert) -->
+          <g stroke="#B8B8B8" stroke-width="0.5" fill="none">
+            <line x1="12" y1="42" x2="44" y2="42"/>
+            <line x1="12" y1="58" x2="44" y2="58"/>
+            <line x1="20" y1="34" x2="20" y2="68"/>
+            <line x1="36" y1="34" x2="36" y2="68"/>
+          </g>
+          <text x="28" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">Lambert-93</text>
+          <!-- arrow -->
+          <g stroke="#0F172A" stroke-width="0.7" fill="none" marker-end="url(#mh3)">
+            <path d="M 50 50 L 66 50"/>
+          </g>
+          <defs>
+            <marker id="mh3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M0 0 L10 5 L0 10 z" fill="#0F172A"/>
+            </marker>
+          </defs>
+          <!-- right: globe-like (lat/lon) -->
+          <g fill="none" stroke="#2E7D32" stroke-width="0.7">
+            <circle cx="92" cy="50" r="16"/>
+            <ellipse cx="92" cy="50" rx="16" ry="6"/>
+            <line x1="92" y1="34" x2="92" y2="66"/>
+          </g>
+          <text x="92" y="78" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#2E7D32" font-weight="600">WGS-84</text>
+          <text x="60" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">pyproj</text>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">CRS reprojection</div>
+        <div class="eq">$f:(x,y)_{2154}\!\to\!(\lambda,\phi)_{4326}$</div>
+      </div>
+    </div>
+
+    <!-- ============ STEP 7 — Metadata serialization =========== -->
+    <div class="meth-card">
+      <div class="head"><div class="n">7</div>EMIT</div>
+      <div class="fig">
+        <svg viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg" aria-label="Per-roof metadata">
+          <!-- header label -->
+          <text x="60" y="13" text-anchor="middle" font-family="JetBrains Mono" font-size="7" fill="#1F4E79" font-weight="600">per-roof JSON output</text>
+
+          <!-- N compass (top-right) -->
+          <g>
+            <circle cx="103" cy="22" r="6" fill="#fff" stroke="#B8B8B8" stroke-width="0.5"/>
+            <line x1="103" y1="22" x2="103" y2="18" stroke="#C62828" stroke-width="1"/>
+            <polygon points="101.5,18.5 104.5,18.5 103,16" fill="#C62828"/>
+            <text x="103" y="14" text-anchor="middle" font-family="JetBrains Mono" font-size="5" fill="#C62828" font-weight="700">N</text>
+          </g>
+
+          <!-- Top-down view of a 2-slope (gable) roof with horizontal ridge.
+               Back slope faces N (azimuth 0°) → red.
+               Front slope faces S (azimuth 180°) → cyan.
+               The hue convention matches the rest of the deck. -->
+          <g stroke="#fff" stroke-width="0.7">
+            <polygon points="34,30 86,30 86,50 34,50" fill="hsl(0,75%,55%)"  fill-opacity="0.85"/>
+            <polygon points="34,50 86,50 86,70 34,70" fill="hsl(180,60%,55%)" fill-opacity="0.85"/>
+          </g>
+          <!-- ridge (top of the gable) -->
+          <line x1="34" y1="50" x2="86" y2="50" stroke="#0F172A" stroke-width="0.9"/>
+
+          <!-- azimuth arrows: each slope's down-slope direction
+               (= the direction the slope faces) -->
+          <g stroke="#0F172A" stroke-width="0.7" fill="#0F172A">
+            <!-- back slope faces up (N) -->
+            <line x1="60" y1="44" x2="60" y2="36"/>
+            <polygon points="57.5,37 62.5,37 60,33"/>
+            <!-- front slope faces down (S) -->
+            <line x1="60" y1="56" x2="60" y2="64"/>
+            <polygon points="57.5,63 62.5,63 60,67"/>
+          </g>
+
+          <!-- output labels (the three numbers we serialise) -->
+          <g font-family="JetBrains Mono" font-size="6.5" fill="#0F172A">
+            <text x="14" y="36">α</text>
+            <text x="14" y="44" font-size="5" fill="#6B7280">tilt</text>
+            <text x="14" y="56">β</text>
+            <text x="14" y="64" font-size="5" fill="#6B7280">azimuth</text>
+            <text x="14" y="76">A</text>
+            <text x="14" y="84" font-size="5" fill="#6B7280">area</text>
+          </g>
+        </svg>
+      </div>
+      <div class="body">
+        <div class="t">Metadata serialisation</div>
+        <div class="eq">$\beta = (90 - \arctan_2(n_y, n_x))\bmod 360°$</div>
+      </div>
+    </div>
+
+  </div>
+
+  <p style="font-family:'Crimson Pro',Georgia,serif;font-style:italic;font-size:14px;color:var(--ink-mute);margin-top:20px;text-align:center">
+    Output: one JSON per LiDAR tile · per roof region: tilt, azimuth, area, vertex polygon (WGS-84)
+  </p>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 5 — SEGMENTATION ENGINE  +  EMBEDDED JSON VIEWER
+     ============================================================ -->
+<section class="slide tinted" id="s-engine">
+  <span class="slide-tag">§ 4 · ROOF SEGMENTATION</span>
+  <span class="slide-num">05 / 08</span>
+
+  <h2 class="slide-title">From a 3D point cloud to <em>roof planes</em>.</h2>
+  <p class="lede">For every PV-positive building in a tile, the engine isolates the roof points, fits flat regions, and emits one tilt/azimuth/area record per region — all in a JSON file per tile.</p>
+
+  <div class="row row-40-60" style="gap:24px;align-items:start">
+    <div>
+      <div class="schema" style="grid-template-columns:1fr 1fr;gap:8px">
+        <div class="step"><span class="n">1</span><strong>Clip</strong> building points to cadastre</div>
+        <div class="step"><span class="n">2</span><strong>Voxelize</strong> on a 1&nbsp;m grid</div>
+        <div class="step"><span class="n">3</span><strong>Triangulate</strong> &amp; filter slivers</div>
+        <div class="step"><span class="n">4</span><strong>Region-grow</strong> by surface normal</div>
+        <div class="step"><span class="n">5</span><strong>Merge</strong> near-coplanar regions</div>
+        <div class="step"><span class="n">6</span><strong>Project</strong> onto mean plane → JSON</div>
+      </div>
+
+      <div class="block emerald" style="margin-top:18px">
+        <strong>Live preview &nbsp;→</strong> the panel beside this text shows real outputs from <strong>13 contiguous tiles</strong> in dépt 82, coloured by roof azimuth (red = N, cyan = S). Click any roof to inspect its tilt &amp; azimuth.
+      </div>
+    </div>
+
+    <div>
+      <div class="viewer-cap">
+        <div class="label">Live · roof regions extracted from 13 LiDAR tiles · dépt 82</div>
+        <div class="actions">
+          <button type="button" class="fs-btn" data-fs-target="vf-tiles">⛶ fullscreen</button>
+          <a href="viewer-tiles.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
+        </div>
+      </div>
+      <div class="viewer-shell">
+        <iframe id="vf-tiles" class="viewer-frame"
+                src="viewer-tiles.html?embed=1"
+                loading="lazy" allowfullscreen
+                title="Tile JSON viewer"></iframe>
+        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
+        <button type="button" class="fs-corner" data-fs-target="vf-tiles" aria-label="Toggle fullscreen">⛶ fullscreen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
+     SLIDE 9 — DEPT 82 PRODUCTION RUN
+     ============================================================ -->
+<!-- ============================================================
+     SLIDE 7 — DÉPT 82 RESULTS  +  TILT/AZIMUTH  +  PANEL VIEWER
+     ============================================================ -->
+<section class="slide" id="s-prod">
+  <span class="slide-tag">§ 5 · RESULTS · DÉPT 82</span>
+  <span class="slide-num">06 / 08</span>
+
+  <h2 class="slide-title">First full département: <em>Tarn-et-Garonne.</em></h2>
+  <p class="lede">5 058 panels detected, 99.1 % bound to a roof plane. The map below is the live database overlaid on satellite imagery — colour = azimuth.</p>
+
+  <!-- Compact stat strip -->
+  <div class="row" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
+    <div class="stat"><div class="num count" data-target="1641">0</div><div class="unit">tiles processed</div><div class="caption">99.4 % of 1 651 — in 1 h 16 min</div></div>
+    <div class="stat"><div class="num emerald count" data-target="5058">0</div><div class="unit">panels detected</div><div class="caption">across 4 190 buildings</div></div>
+    <div class="stat"><div class="num emerald" style="font-size:36px">99.1<span style="font-size:20px;color:var(--ink-mute)"> %</span></div><div class="unit">have tilt + azimuth</div><div class="caption">3-tier match · nothing dropped</div></div>
+    <div class="stat"><div class="num emerald count" data-target="364301">0</div><div class="unit">m² of true inclined surface</div><div class="caption">+4.0 % vs flat 2D area</div></div>
+  </div>
+
+  <!-- Tilt / azimuth distributions  +  embedded panel viewer -->
+  <div class="row row-40-60" style="gap:24px;align-items:start">
+    <div>
+      <div class="label">Tilt distribution &nbsp;·&nbsp; 5 014 matched panels</div>
+      <div class="chart-wrap short" style="height:180px"><canvas id="chart-tilt"></canvas></div>
+
+      <div class="label" style="margin-top:18px">Azimuth distribution &nbsp;·&nbsp; deg from N</div>
+      <div class="chart-wrap" style="height:280px"><canvas id="chart-azimuth"></canvas></div>
+    </div>
+
+    <div>
+      <div class="viewer-cap">
+        <div class="label">Live · panels__82.geojson + panels__82.csv</div>
+        <div class="actions">
+          <button type="button" class="fs-btn" data-fs-target="vf-panels">⛶ fullscreen</button>
+          <a href="viewer-panels.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
+        </div>
+      </div>
+      <div class="viewer-shell">
+        <iframe id="vf-panels" class="viewer-frame" style="height:540px"
+                src="viewer-panels.html?embed=1"
+                loading="lazy" allowfullscreen
+                title="Panel viewer"></iframe>
+        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
+        <button type="button" class="fs-corner" data-fs-target="vf-panels" aria-label="Toggle fullscreen">⛶ fullscreen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+
+<!-- ============================================================
+     APPENDIX — SCALE OF THE DATA (was slide 3)  (size + time in one slide)
      ============================================================ -->
 <section class="slide tinted" id="s-problem">
-  <span class="slide-tag">§ 2 · THE PROBLEM</span>
-  <span class="slide-num">03 / 07</span>
+  <span class="slide-tag">LIMITATIONS · § 6 · SCALE OF THE DATA</span>
+  <span class="slide-num">07 / 08</span>
 
   <h2 class="slide-title">The data is <em>huge</em> — and slow.</h2>
   <p class="lede">A naïve "download everything, process everything" approach is impossible on a single machine.</p>
@@ -555,178 +1195,13 @@
 </section>
 
 
-<!-- ============================================================
-     SLIDE 4 — PIPELINE OVERVIEW (ANIMATED SVG)
-     ============================================================ -->
-<section class="slide" id="s-pipeline">
-  <span class="slide-tag">§ 3 · PIPELINE OVERVIEW</span>
-  <span class="slide-num">04 / 07</span>
-
-  <h2 class="slide-title">3 stages, animated.</h2>
-  <p class="lede">Top row: stage 0 indexes the active tiles; stage 1 downloads &amp; segments roofs from LiDAR. Bottom row: stage 2a predicts panel masks from imagery; stage 2b binds each panel to a roof plane. LAZ files are deleted as soon as each tile's JSON is written.</p>
-
-  <div style="width:100%;max-width:1500px;margin:0 auto">
-    <svg viewBox="0 0 1500 540" width="100%" preserveAspectRatio="xMidYMid meet" aria-label="3-stage pipeline">
-      <defs>
-        <marker id="arrh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--navy)"/>
-        </marker>
-        <marker id="arrh-soft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--rule)"/>
-        </marker>
-        <marker id="arrh-em" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--emerald)"/>
-        </marker>
-      </defs>
-
-      <!-- Stage band tints -->
-      <rect x="0"    y="40" width="380" height="460" fill="var(--tint)" rx="3"/>
-      <rect x="395"  y="40" width="650" height="460" fill="var(--tint)" rx="3"/>
-      <rect x="1060" y="40" width="440" height="460" fill="var(--tint)" rx="3"/>
-
-      <!-- Band labels -->
-      <text x="190" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 1 · INDEX</text>
-      <text x="720" y="65" text-anchor="middle" fill="var(--navy)"  font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 2 · SEGMENT</text>
-      <text x="1280" y="65" text-anchor="middle" fill="var(--navy)" font-family="Inter" font-weight="700" font-size="14" letter-spacing="2">STAGE 3 · ASSIGN</text>
-
-      <!-- Inputs (Stage 1) -->
-      <g class="input">
-        <rect x="20"  y="120" width="160" height="40" rx="3"/><text x="100" y="138" text-anchor="middle" font-weight="600">PV CSVs</text><text x="100" y="152" text-anchor="middle" font-size="9" fill="var(--ink-mute)">score_roof_*.csv</text>
-        <rect x="20"  y="190" width="160" height="40" rx="3"/><text x="100" y="208" text-anchor="middle" font-weight="600">Cadastre SHP</text><text x="100" y="222" text-anchor="middle" font-size="9" fill="var(--ink-mute)">batiments_*.shp</text>
-        <rect x="20"  y="260" width="160" height="40" rx="3"/><text x="100" y="278" text-anchor="middle" font-weight="600">IGN WFS</text><text x="100" y="292" text-anchor="middle" font-size="9" fill="var(--ink-mute)">LIDAR-HD:dalle</text>
-      </g>
-
-      <!-- Stage 0 -->
-      <g class="stage s1">
-        <rect x="220" y="180" width="150" height="60" rx="4"/>
-        <text x="295" y="208" text-anchor="middle" font-size="15">Stage 0</text>
-        <text x="295" y="226" text-anchor="middle" class="sub">stage0_build_index.py</text>
-      </g>
-
-      <!-- SQLite store -->
-      <g class="store">
-        <path d="M 220 320
-                 a 50 9 0 0 0 100 0
-                 v 50
-                 a 50 9 0 0 1 -100 0 z" />
-        <ellipse cx="270" cy="320" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
-        <text x="270" y="350" text-anchor="middle">SQLite queue</text>
-        <text x="270" y="365" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">france_pv.sqlite</text>
-      </g>
-
-      <!-- Stage 1 -->
-      <g class="stage s2">
-        <rect x="430" y="120" width="180" height="56" rx="4"/>
-        <text x="520" y="146" text-anchor="middle" font-size="15">Stage 1</text>
-        <text x="520" y="164" text-anchor="middle" class="sub">stage1_run.py</text>
-      </g>
-
-      <!-- LAZ buffer (transient) -->
-      <g class="transient">
-        <rect x="640" y="125" width="170" height="46" rx="3"/>
-        <text x="725" y="147" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink-mute)">LAZ buffer (transient)</text>
-        <text x="725" y="161" text-anchor="middle" font-size="10">≤ 60 tiles · ≤ 15 GB</text>
-      </g>
-
-      <!-- Engine v2 -->
-      <g>
-        <rect x="430" y="220" width="380" height="120" rx="4" fill="var(--navy-08)" stroke="var(--navy)" stroke-width="0.7"/>
-        <text x="620" y="245" text-anchor="middle" font-family="Inter" font-weight="700" fill="var(--navy)" font-size="13">Segmentation engine v2 — per LAZ tile, per building</text>
-        <text x="620" y="270" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">clip class-6 → cadastre · voxel 1 m · 2D Delaunay</text>
-        <text x="620" y="288" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">region-grow normals (cos 8°) · merge coplanar (cos 3°)</text>
-        <text x="620" y="306" text-anchor="middle" font-family="Inter" font-size="11" fill="var(--ink-soft)">project on mean plane → JSON</text>
-      </g>
-
-      <!-- Per-tile JSONs -->
-      <g class="store">
-        <path d="M 870 240
-                 a 50 9 0 0 0 100 0
-                 v 50
-                 a 50 9 0 0 1 -100 0 z" />
-        <ellipse cx="920" cy="240" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
-        <text x="920" y="270" text-anchor="middle">Per-tile JSONs</text>
-        <text x="920" y="285" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">≈ 430 KB / tile</text>
-      </g>
-
-      <!-- BDOrtho input -->
-      <g class="input">
-        <rect x="1080" y="125" width="170" height="46" rx="3"/>
-        <text x="1165" y="147" text-anchor="middle" font-weight="600">BDOrtho 20 cm</text>
-        <text x="1165" y="161" text-anchor="middle" font-size="9" fill="var(--ink-mute)">per-building JPG + .aux.xml</text>
-      </g>
-
-      <!-- Stage 2a -->
-      <g class="stage s3">
-        <rect x="1100" y="200" width="160" height="56" rx="4"/>
-        <text x="1180" y="226" text-anchor="middle" font-size="15">Stage 2a</text>
-        <text x="1180" y="244" text-anchor="middle" class="sub">predict_panels.py</text>
-      </g>
-
-      <!-- Panel polygons store -->
-      <g class="store">
-        <path d="M 1310 200
-                 a 50 9 0 0 0 100 0
-                 v 50
-                 a 50 9 0 0 1 -100 0 z" />
-        <ellipse cx="1360" cy="200" rx="50" ry="9" fill="#fff" stroke="var(--emerald)"/>
-        <text x="1360" y="230" text-anchor="middle">Panel polygons</text>
-        <text x="1360" y="245" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">panels__{dept}.geojson</text>
-      </g>
-
-      <!-- Stage 2b -->
-      <g class="stage s3">
-        <rect x="1100" y="320" width="160" height="56" rx="4"/>
-        <text x="1180" y="346" text-anchor="middle" font-size="15">Stage 2b</text>
-        <text x="1180" y="364" text-anchor="middle" class="sub">stage2_panels.py</text>
-      </g>
-
-      <!-- Panel database (final) -->
-      <g class="store">
-        <path d="M 1310 320
-                 a 50 9 0 0 0 100 0
-                 v 70
-                 a 50 9 0 0 1 -100 0 z" fill="var(--emerald-10)"/>
-        <ellipse cx="1360" cy="320" rx="50" ry="9" fill="var(--emerald-10)" stroke="var(--emerald)" stroke-width="1.2"/>
-        <text x="1360" y="365" text-anchor="middle" font-weight="700" font-size="12">Panel database</text>
-        <text x="1360" y="380" text-anchor="middle" font-family="JetBrains Mono" font-size="9" font-weight="400" fill="var(--ink-mute)">SQLite · GeoJSON · CSV</text>
-      </g>
-
-      <!-- Arrows: animated data flow -->
-      <path class="arrow flow" d="M 180 140 L 220 195"  marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 180 210 L 220 210"  marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 180 280 L 220 230"  marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 295 240 L 295 311"  marker-end="url(#arrh-em)"/>
-      <path class="arrow flow" d="M 320 345 L 430 148"  marker-end="url(#arrh)"/>
-      <path class="arrow"      d="M 610 148 L 640 148"  marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 725 175 L 620 220"  marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 810 280 L 870 268"  marker-end="url(#arrh-em)"/>
-
-      <!-- Stage 2a arrows -->
-      <path class="arrow flow" d="M 1165 175 L 1165 200" marker-end="url(#arrh)"/>
-      <path class="arrow flow" d="M 1260 225 L 1310 220" marker-end="url(#arrh-em)"/>
-
-      <!-- Cross-stage: JSONs -> Stage 2b -->
-      <path class="arrow flow" d="M 970 270 C 1040 280, 1040 350, 1100 348" marker-end="url(#arrh)"/>
-
-      <!-- Panel polygons -> Stage 2b -->
-      <path class="arrow flow" d="M 1360 256 C 1360 290, 1260 305, 1230 320" marker-end="url(#arrh)"/>
-
-      <!-- Stage 2b -> final DB -->
-      <path class="arrow flow" d="M 1260 348 L 1310 348" marker-end="url(#arrh-em)"/>
-    </svg>
-  </div>
-</section>
-
 
 <!-- ============================================================
-     SLIDE 5 — STAGE 0 (INDEX)
-     ============================================================ -->
-<!-- ============================================================
-     SLIDE 5 — INDEX  +  DOWNLOAD + PROCESS  (merged)
+     APPENDIX — INDEX & DOWNLOAD DETAILS (was slide 5)
      ============================================================ -->
 <section class="slide tinted" id="s-index-download">
-  <span class="slide-tag">§ 4 · INDEX → DOWNLOAD</span>
-  <span class="slide-num">05 / 07</span>
+  <span class="slide-tag">LIMITATIONS · § 7 · INDEX &amp; DOWNLOAD</span>
+  <span class="slide-num">08 / 08</span>
 
   <h2 class="slide-title">Pick the tiles, then stream them through workers.</h2>
   <p class="lede">First we decide <em>which</em> tiles to fetch. Then a queue feeds parallel download &amp; processing workers that delete each LAZ as soon as it's been turned into a roof-region JSON.</p>
@@ -778,106 +1253,6 @@
 </section>
 
 
-<!-- ============================================================
-     SLIDE 7 — SEGMENTATION ENGINE V2
-     ============================================================ -->
-<!-- ============================================================
-     SLIDE 6 — SEGMENTATION ENGINE  +  EMBEDDED JSON VIEWER
-     ============================================================ -->
-<section class="slide tinted" id="s-engine">
-  <span class="slide-tag">§ 5 · ROOF SEGMENTATION</span>
-  <span class="slide-num">06 / 07</span>
-
-  <h2 class="slide-title">From a 3D point cloud to <em>roof planes</em>.</h2>
-  <p class="lede">For every PV-positive building in a tile, the engine isolates the roof points, fits flat regions, and emits one tilt/azimuth/area record per region — all in a JSON file per tile.</p>
-
-  <div class="row row-40-60" style="gap:24px;align-items:start">
-    <div>
-      <div class="schema" style="grid-template-columns:1fr 1fr;gap:8px">
-        <div class="step"><span class="n">1</span><strong>Clip</strong> building points to cadastre</div>
-        <div class="step"><span class="n">2</span><strong>Voxelize</strong> on a 1&nbsp;m grid</div>
-        <div class="step"><span class="n">3</span><strong>Triangulate</strong> &amp; filter slivers</div>
-        <div class="step"><span class="n">4</span><strong>Region-grow</strong> by surface normal</div>
-        <div class="step"><span class="n">5</span><strong>Merge</strong> near-coplanar regions</div>
-        <div class="step"><span class="n">6</span><strong>Project</strong> onto mean plane → JSON</div>
-      </div>
-
-      <div class="block emerald" style="margin-top:18px">
-        <strong>Live preview &nbsp;→</strong> the panel beside this text shows real outputs from <strong>13 contiguous tiles</strong> in dépt 82, coloured by roof azimuth (red = N, cyan = S). Click any roof to inspect its tilt &amp; azimuth.
-      </div>
-    </div>
-
-    <div>
-      <div class="viewer-cap">
-        <div class="label">Live · roof regions extracted from 13 LiDAR tiles · dépt 82</div>
-        <div class="actions">
-          <button type="button" class="fs-btn" data-fs-target="vf-tiles">⛶ fullscreen</button>
-          <a href="viewer-tiles.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
-        </div>
-      </div>
-      <div class="viewer-shell">
-        <iframe id="vf-tiles" class="viewer-frame"
-                src="viewer-tiles.html?embed=1"
-                loading="lazy" allowfullscreen
-                title="Tile JSON viewer"></iframe>
-        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
-        <button type="button" class="fs-corner" data-fs-target="vf-tiles" aria-label="Toggle fullscreen">⛶ fullscreen</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-
-<!-- ============================================================
-     SLIDE 9 — DEPT 82 PRODUCTION RUN
-     ============================================================ -->
-<!-- ============================================================
-     SLIDE 7 — DÉPT 82 RESULTS  +  TILT/AZIMUTH  +  PANEL VIEWER
-     ============================================================ -->
-<section class="slide" id="s-prod">
-  <span class="slide-tag">§ 6 · RESULTS · DÉPT 82</span>
-  <span class="slide-num">07 / 07</span>
-
-  <h2 class="slide-title">First full département: <em>Tarn-et-Garonne.</em></h2>
-  <p class="lede">5 058 panels detected, 99.1 % bound to a roof plane. The map below is the live database overlaid on satellite imagery — colour = azimuth.</p>
-
-  <!-- Compact stat strip -->
-  <div class="row" style="grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px">
-    <div class="stat"><div class="num count" data-target="1641">0</div><div class="unit">tiles processed</div><div class="caption">99.4 % of 1 651 — in 1 h 16 min</div></div>
-    <div class="stat"><div class="num emerald count" data-target="5058">0</div><div class="unit">panels detected</div><div class="caption">across 4 190 buildings</div></div>
-    <div class="stat"><div class="num emerald" style="font-size:36px">99.1<span style="font-size:20px;color:var(--ink-mute)"> %</span></div><div class="unit">have tilt + azimuth</div><div class="caption">3-tier match · nothing dropped</div></div>
-    <div class="stat"><div class="num emerald count" data-target="364301">0</div><div class="unit">m² of true inclined surface</div><div class="caption">+4.0 % vs flat 2D area</div></div>
-  </div>
-
-  <!-- Tilt / azimuth distributions  +  embedded panel viewer -->
-  <div class="row row-40-60" style="gap:24px;align-items:start">
-    <div>
-      <div class="label">Tilt distribution &nbsp;·&nbsp; 5 014 matched panels</div>
-      <div class="chart-wrap short" style="height:180px"><canvas id="chart-tilt"></canvas></div>
-
-      <div class="label" style="margin-top:18px">Azimuth distribution &nbsp;·&nbsp; deg from N</div>
-      <div class="chart-wrap" style="height:280px"><canvas id="chart-azimuth"></canvas></div>
-    </div>
-
-    <div>
-      <div class="viewer-cap">
-        <div class="label">Live · panels__82.geojson + panels__82.csv</div>
-        <div class="actions">
-          <button type="button" class="fs-btn" data-fs-target="vf-panels">⛶ fullscreen</button>
-          <a href="viewer-panels.html" target="_blank" class="open-new" rel="noopener">new tab ↗</a>
-        </div>
-      </div>
-      <div class="viewer-shell">
-        <iframe id="vf-panels" class="viewer-frame" style="height:540px"
-                src="viewer-panels.html?embed=1"
-                loading="lazy" allowfullscreen
-                title="Panel viewer"></iframe>
-        <div class="fs-hint">press <strong>Esc</strong> to exit fullscreen</div>
-        <button type="button" class="fs-corner" data-fs-target="vf-panels" aria-label="Toggle fullscreen">⛶ fullscreen</button>
-      </div>
-    </div>
-  </div>
-</section>
 </main>
 
 <!-- ============================================================
