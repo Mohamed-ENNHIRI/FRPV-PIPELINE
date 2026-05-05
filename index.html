@@ -391,6 +391,75 @@
     100% { width:0;    background:var(--emerald); }
   }
 
+  /* ---------- Companion-experiment slide (surface_to_power) ---------- */
+  .stp-grid{
+    display:grid;
+    grid-template-columns: 60% 40%;
+    gap:22px;
+    margin-top:14px;
+  }
+  .stp-fig{
+    border:1px solid var(--rule-soft); border-radius:4px;
+    background:#fff; padding:14px;
+    /* No flex sizing: container's height is the sum of cap + chart + footer.
+       Chart.js needs a parent with a determinate height. */
+  }
+  .stp-fig .cap{
+    display:flex; justify-content:space-between; align-items:baseline;
+    margin-bottom:8px; gap:14px;
+  }
+  .stp-fig .axis-toggle{
+    display:flex; gap:4px;
+    font-family:'JetBrains Mono',monospace; font-size:10px;
+  }
+  .stp-fig .axis-toggle button{
+    background:#fff; border:1px solid var(--rule); color:var(--ink-soft);
+    padding:3px 8px; border-radius:3px; cursor:pointer;
+  }
+  .stp-fig .axis-toggle button[aria-pressed="true"]{
+    background:var(--navy); color:#fff; border-color:var(--navy);
+  }
+  /* Explicit pixel height so Chart.js (responsive + maintainAspectRatio:false)
+     has a determinate parent box to fit into. */
+  .stp-chart{ position:relative; height:440px; width:100%; }
+  .stp-chart > canvas{ display:block; width:100% !important; height:100% !important; }
+
+  .stp-side{ display:flex; flex-direction:column; gap:14px; }
+  .stp-filters{
+    background:var(--tint); border-left:3px solid var(--navy);
+    padding:12px 14px; border-radius:2px;
+    font-size:12.5px; color:var(--ink-soft); line-height:1.5;
+  }
+  .stp-filters strong{ color:var(--ink); }
+  .stp-filters code{
+    font-family:'JetBrains Mono',monospace; font-size:11px;
+    background:#fff; padding:0 4px; border-radius:2px;
+    border:1px solid var(--rule-soft);
+  }
+  .stp-metrics{
+    border:1px solid var(--emerald); background:var(--emerald-10);
+    border-radius:3px; padding:14px 16px;
+  }
+  .stp-metrics .row-mq{
+    display:grid; grid-template-columns:repeat(2,1fr); gap:10px;
+    margin-bottom:10px;
+  }
+  .stp-metrics .mq{ display:flex; flex-direction:column; gap:1px; }
+  .stp-metrics .mq .v{
+    font-family:'Crimson Pro',serif; font-weight:700; font-size:24px;
+    color:var(--emerald); line-height:1; font-variant-numeric:tabular-nums;
+  }
+  .stp-metrics .mq .l{
+    font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--ink-mute);
+  }
+  .stp-metrics .totals{
+    font-size:11.5px; color:var(--ink-soft);
+    border-top:1px dashed rgba(46,125,50,.4); padding-top:8px;
+    line-height:1.55;
+  }
+  .stp-metrics .totals strong{ color:var(--ink); font-family:'JetBrains Mono',monospace; font-size:11px; }
+
   /* ---------- 7-step extraction methodology slide ---------- */
   .meth-row{
     display:grid;
@@ -481,7 +550,7 @@
      ============================================================ -->
 <section class="slide" id="s-title" data-tag="lidar_loop · may 2026">
   <span class="slide-tag">LIDAR_LOOP · MAY 2026</span>
-  <span class="slide-num">01 / 08</span>
+  <span class="slide-num">01 / 09</span>
 
   <div style="max-width:1180px">
     <div class="label">Research presentation</div>
@@ -569,7 +638,7 @@
      ============================================================ -->
 <section class="slide" id="s-goal">
   <span class="slide-tag">§ 1 · GOAL</span>
-  <span class="slide-num">02 / 08</span>
+  <span class="slide-num">02 / 09</span>
 
   <h2 class="slide-title">Map every solar panel in France — <em>automatically.</em></h2>
   <p class="lede">From open public data we build a single, queryable catalogue of every photovoltaic panel installed on French rooftops.</p>
@@ -602,7 +671,7 @@
      ============================================================ -->
 <section class="slide" id="s-pipeline">
   <span class="slide-tag">§ 2 · PIPELINE OVERVIEW</span>
-  <span class="slide-num">03 / 08</span>
+  <span class="slide-num">03 / 09</span>
 
   <h2 class="slide-title">3 stages, animated.</h2>
   <p class="lede">Top row: stage 0 indexes the active tiles; stage 1 downloads &amp; segments roofs from LiDAR. Bottom row: stage 2a predicts panel masks from imagery; stage 2b binds each panel to a roof plane. LAZ files are deleted as soon as each tile's JSON is written.</p>
@@ -762,7 +831,7 @@
      ============================================================ -->
 <section class="slide" id="s-methodology">
   <span class="slide-tag">§ 3 · EXTRACTION METHODOLOGY</span>
-  <span class="slide-num">04 / 08</span>
+  <span class="slide-num">04 / 09</span>
 
   <h2 class="slide-title">From <em>3D point cloud</em> to <em>georeferenced roof planes</em>, in 7 steps.</h2>
   <p class="lede">Each LiDAR tile passes through the same deterministic algorithm. Below: every step, its key formula, and a schematic of what it does.</p>
@@ -1047,7 +1116,7 @@
      ============================================================ -->
 <section class="slide tinted" id="s-engine">
   <span class="slide-tag">§ 4 · ROOF SEGMENTATION</span>
-  <span class="slide-num">05 / 08</span>
+  <span class="slide-num">05 / 09</span>
 
   <h2 class="slide-title">From a 3D point cloud to <em>roof planes</em>.</h2>
   <p class="lede">For every PV-positive building in a tile, the engine isolates the roof points, fits flat regions, and emits one tilt/azimuth/area record per region — all in a JSON file per tile.</p>
@@ -1097,7 +1166,7 @@
      ============================================================ -->
 <section class="slide" id="s-prod">
   <span class="slide-tag">§ 5 · RESULTS · DÉPT 82</span>
-  <span class="slide-num">06 / 08</span>
+  <span class="slide-num">06 / 09</span>
 
   <h2 class="slide-title">First full département: <em>Tarn-et-Garonne.</em></h2>
   <p class="lede">5 058 panels detected, 99.1 % bound to a roof plane. The map below is the live database overlaid on satellite imagery — colour = azimuth.</p>
@@ -1144,11 +1213,76 @@
 
 
 <!-- ============================================================
+     SLIDE 7 — COMPANION EXPERIMENT
+     surface_to_power: imagery-derived capacity vs RNI per commune
+     ============================================================ -->
+<section class="slide" id="s-companion">
+  <span class="slide-tag">§ 6 · COMPANION EXPERIMENT</span>
+  <span class="slide-num">07 / 09</span>
+
+  <h2 class="slide-title">From <em>panel surface</em> to <em>installed capacity</em> — validated against the national registry.</h2>
+  <p class="lede">Each detected panel surface S is converted to capacity by a single rule: <strong>C = S / 5</strong>&nbsp;[kWp] (5 m²/kWp baseline for mainstream c-Si modules). We sum per commune and compare against the official <em>Registre National des Installations</em>. Across <strong>161 communes</strong> in dépt 82 the slope-through-origin is <strong>β = 0.964</strong> — the imagery pipeline recovers ≈ 96 % of the registered rooftop capacity.</p>
+
+  <div class="stp-grid">
+
+    <!-- ============ LEFT — interactive Figure 1 (scatter) ============ -->
+    <div class="stp-fig">
+      <div class="cap">
+        <div class="label">Figure 1 · per-commune validation · n = 161</div>
+        <div class="axis-toggle" id="stp-axis-toggle">
+          <button data-scale="log"    aria-pressed="true">log</button>
+          <button data-scale="linear" aria-pressed="false">linear</button>
+        </div>
+      </div>
+      <div class="stp-chart"><canvas id="stp-scatter"></canvas></div>
+      <div style="font-family:'Crimson Pro',serif;font-style:italic;font-size:12px;color:var(--ink-mute);margin-top:6px;text-align:center;line-height:1.5">
+        each dot = one commune &nbsp;·&nbsp; hover for details &nbsp;·&nbsp; grey dashed = y = x &nbsp;·&nbsp; navy = β × x
+      </div>
+    </div>
+
+    <!-- ============ RIGHT — filters + metrics ============ -->
+    <div class="stp-side">
+
+      <div class="stp-filters">
+        <div class="label" style="color:var(--navy);margin-bottom:4px">Filters &amp; rules applied</div>
+        <strong>Per-panel:</strong> capacity from area, $C = S / 5$ kWp (Fraunhofer ISE 2023 baseline).<br>
+        <strong>Registry:</strong> <code>codeFiliere = SOLAI</code>, dépt 82, snapshot 31-12-2022.<br>
+        <strong>Rooftop subset:</strong> aggregated rows of installations &lt; 36 kW <em>+</em> individual installations ≤ 500 kW.<br>
+        <strong>500 kW threshold:</strong> separates rooftop from ground-mount utility farms cleanly (95th pct = 915 kW vs the 1 MW class) — removes 40 rows totalling 139 MWp.<br>
+        <strong>Commune key:</strong> INSEE code from <code>building_id</code> prefix (BD&nbsp;TOPO encoding).
+      </div>
+
+      <div class="stp-metrics">
+        <div class="label" style="color:var(--emerald);margin-bottom:8px">Headline result</div>
+        <div class="row-mq">
+          <div class="mq"><span class="v">0.964</span><span class="l">slope β through origin</span></div>
+          <div class="mq"><span class="v">0.885</span><span class="l">R²₀ no intercept</span></div>
+          <div class="mq"><span class="v">0.923</span><span class="l">Pearson r</span></div>
+          <div class="mq"><span class="v">−38</span><span class="l">Bland–Altman bias (kWp)</span></div>
+        </div>
+        <div class="totals">
+          <strong>Σ Cᵣ = 78 272 kWp</strong> registered &nbsp;·&nbsp; <strong>Σ Cₑ = 72 100 kWp</strong> estimated &nbsp;·&nbsp; ratio 0.921<br>
+          95 % limits of agreement: <strong>[ −660 , +583 ] kWp</strong> &nbsp;·&nbsp; no funnelling (no multiplicative bias)
+        </div>
+      </div>
+
+      <div style="font-family:'Crimson Pro',serif;font-style:italic;font-size:13px;color:var(--ink-mute);line-height:1.55;border-top:1px solid var(--rule-soft);padding-top:10px;">
+        <strong style="color:var(--ink)">Three-way agreement.</strong>
+        Slope ≈ 1, near-zero Bland–Altman bias, and a south-peaked tilt/azimuth distribution
+        (median tilt 17.9°, mean azimuth 185°) — three independent checks that the imagery-based
+        per-commune capacity is a <span style="color:var(--emerald)">low-cost proxy</span> for the registry value.
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ============================================================
      APPENDIX — SCALE OF THE DATA (was slide 3)  (size + time in one slide)
      ============================================================ -->
 <section class="slide tinted" id="s-problem">
-  <span class="slide-tag">LIMITATIONS · § 6 · SCALE OF THE DATA</span>
-  <span class="slide-num">07 / 08</span>
+  <span class="slide-tag">LIMITATIONS · § 7 · SCALE OF THE DATA</span>
+  <span class="slide-num">08 / 09</span>
 
   <h2 class="slide-title">The data is <em>huge</em> — and slow.</h2>
   <p class="lede">A naïve "download everything, process everything" approach is impossible on a single machine.</p>
@@ -1200,8 +1334,8 @@
      APPENDIX — INDEX & DOWNLOAD DETAILS (was slide 5)
      ============================================================ -->
 <section class="slide tinted" id="s-index-download">
-  <span class="slide-tag">LIMITATIONS · § 7 · INDEX &amp; DOWNLOAD</span>
-  <span class="slide-num">08 / 08</span>
+  <span class="slide-tag">LIMITATIONS · § 8 · INDEX &amp; DOWNLOAD</span>
+  <span class="slide-num">09 / 09</span>
 
   <h2 class="slide-title">Pick the tiles, then stream them through workers.</h2>
   <p class="lede">First we decide <em>which</em> tiles to fetch. Then a queue feeds parallel download &amp; processing workers that delete each LAZ as soon as it's been turned into a roof-region JSON.</p>
@@ -1442,6 +1576,149 @@ new Chart(document.getElementById('chart-azimuth'), {
     }
   }
 });
+
+/* =========================================================
+   COMPANION EXPERIMENT — interactive Figure 1 (Chart.js scatter)
+   surface_to_power: 161 communes, dépt 82
+   x = registered Cᵣ (kWp), y = estimated Cₑ (kWp)
+   ========================================================= */
+function buildCompanionScatter(){
+  const canvas = document.getElementById('stp-scatter');
+  if (!canvas) {
+    console.warn('[companion] canvas #stp-scatter not found');
+    return;
+  }
+  if (typeof Chart === 'undefined') {
+    console.warn('[companion] Chart.js not loaded yet — retrying');
+    setTimeout(buildCompanionScatter, 80);
+    return;
+  }
+  // Surface a visible warning if something throws so it isn't silent.
+  try {
+  return _buildCompanionScatterImpl(canvas);
+  } catch (err) {
+    console.error('[companion] chart build failed:', err);
+    canvas.outerHTML = '<div style="padding:20px;text-align:center;color:#C62828;font-family:JetBrains Mono,monospace;font-size:12px">'
+      + 'figure 1 failed to render: ' + (err.message || err)
+      + ' <br><span style="color:#6B7280">(check the browser console for the stack trace)</span></div>';
+  }
+}
+function _buildCompanionScatterImpl(canvas){
+
+  const COMMUNES = [{"n":"Albefeuille-Lagarde","r":307.8,"e":351.8},{"n":"Albias","r":1069.2,"e":1851.3},{"n":"Aucamville","r":369.6,"e":432.2},{"n":"Auterive","r":75.2,"e":139.1},{"n":"Auty","r":86.0,"e":37.5},{"n":"Auvillar","r":180.0,"e":65.8},{"n":"Barry-d'Islemade","r":54.5,"e":70.9},{"n":"Les Barthes","r":36.6,"e":87.0},{"n":"Beaumont-de-Lomagne","r":2843.3,"e":2120.6},{"n":"Bessens","r":190.2,"e":792.1},{"n":"Bioule","r":709.1,"e":271.5},{"n":"Boudou","r":54.4,"e":82.5},{"n":"Bouloc-en-Quercy","r":229.0,"e":230.2},{"n":"Bourg-de-Visa","r":45.4,"e":51.6},{"n":"Bourret","r":158.2,"e":189.3},{"n":"Bressols","r":1886.9,"e":1957.7},{"n":"Campsas","r":139.8,"e":152.1},{"n":"Canals","r":236.0,"e":58.7},{"n":"Castanet","r":552.0,"e":672.2},{"n":"Castelferrus","r":39.0,"e":28.6},{"n":"Castelmayran","r":343.7,"e":249.8},{"n":"Castelsagrat","r":166.6,"e":182.5},{"n":"Castelsarrasin","r":1973.6,"e":2277.8},{"n":"Castéra-Bouzet","r":742.0,"e":678.7},{"n":"Caumont","r":308.3,"e":39.3},{"n":"Caussade","r":2110.5,"e":1702.4},{"n":"Caylus","r":1631.2,"e":973.7},{"n":"Cayrac","r":44.4,"e":51.1},{"n":"Cayriech","r":349.6,"e":477.9},{"n":"Cazes-Mondenard","r":540.8,"e":411.6},{"n":"Comberouger","r":598.8,"e":541.9},{"n":"Corbarieu","r":408.3,"e":442.8},{"n":"Cordes-Tolosannes","r":55.8,"e":61.6},{"n":"Coutures","r":245.5,"e":317.9},{"n":"Cumont","r":242.0,"e":3.3},{"n":"Dieupentale","r":95.6,"e":87.4},{"n":"Donzac","r":168.6,"e":173.0},{"n":"Dunes","r":590.0,"e":230.7},{"n":"Durfort-Lacapelette","r":549.8,"e":646.8},{"n":"Escatalens","r":109.9,"e":125.6},{"n":"Escazeaux","r":180.0,"e":345.2},{"n":"Esparsac","r":82.1,"e":99.3},{"n":"Espinas","r":580.8,"e":314.4},{"n":"Fabas","r":133.9,"e":161.2},{"n":"Fajolles","r":99.0,"e":40.2},{"n":"Faudoas","r":45.0,"e":44.3},{"n":"Fauroux","r":453.8,"e":345.1},{"n":"Féneyrols","r":90.0,"e":92.4},{"n":"Finhan","r":43.0,"e":35.6},{"n":"Garganvillar","r":396.6,"e":147.5},{"n":"Gariès","r":276.0,"e":94.2},{"n":"Gasques","r":272.9,"e":433.4},{"n":"Génébrières","r":51.6,"e":46.7},{"n":"Gensac","r":99.8,"e":55.1},{"n":"Gimat","r":90.0,"e":130.7},{"n":"Ginals","r":90.0,"e":19.0},{"n":"Goas","r":90.0,"e":3.1},{"n":"Golfech","r":294.8,"e":175.2},{"n":"Goudourville","r":43.4,"e":55.2},{"n":"Gramont","r":89.0,"e":2.2},{"n":"Grisolles","r":1658.9,"e":278.4},{"n":"L'Honor-de-Cos","r":294.9,"e":455.0},{"n":"Labarthe","r":726.0,"e":886.0},{"n":"Labastide-de-Penne","r":335.0,"e":4.0},{"n":"Labastide-Saint-Pierre","r":477.1,"e":525.5},{"n":"Labastide-du-Temple","r":64.3,"e":134.7},{"n":"Labourgade","r":95.0,"e":120.4},{"n":"Lacapelle-Livron","r":277.8,"e":346.6},{"n":"Lachapelle","r":196.0,"e":3.9},{"n":"Lacour","r":89.0,"e":20.0},{"n":"Lacourt-Saint-Pierre","r":196.2,"e":210.7},{"n":"Lafrançaise","r":295.2,"e":447.9},{"n":"Laguépie","r":496.4,"e":429.0},{"n":"Lamagistère","r":44.0,"e":51.7},{"n":"Lamothe-Capdeville","r":549.1,"e":642.4},{"n":"Lamothe-Cumont","r":83.0,"e":172.4},{"n":"Lapenche","r":673.4,"e":357.4},{"n":"Lauzerte","r":336.8,"e":325.2},{"n":"Lavaurette","r":662.6,"e":171.1},{"n":"La Ville-Dieu-du-Temple","r":345.1,"e":409.2},{"n":"Lavit","r":651.7,"e":764.1},{"n":"Léojac","r":369.9,"e":455.4},{"n":"Lizac","r":318.8,"e":381.8},{"n":"Malause","r":83.8,"e":90.9},{"n":"Mansonville","r":258.8,"e":156.4},{"n":"Marignac","r":100.0,"e":185.9},{"n":"Mas-Grenier","r":214.1,"e":263.2},{"n":"Maubec","r":80.0,"e":22.5},{"n":"Meauzac","r":126.6,"e":151.0},{"n":"Mirabel","r":202.2,"e":122.4},{"n":"Miramont-de-Quercy","r":189.6,"e":78.1},{"n":"Moissac","r":1314.2,"e":1567.1},{"n":"Molières","r":568.3,"e":474.3},{"n":"Monclar-de-Quercy","r":207.8,"e":238.3},{"n":"Montaigu-de-Quercy","r":1111.3,"e":1191.0},{"n":"Montalzat","r":697.6,"e":667.8},{"n":"Montauban","r":8092.6,"e":8906.0},{"n":"Montbarla","r":100.0,"e":28.1},{"n":"Montbartier","r":451.9,"e":2562.6},{"n":"Montbeton","r":181.2,"e":269.5},{"n":"Montech","r":1611.7,"e":1077.2},{"n":"Monteils","r":311.2,"e":251.9},{"n":"Montesquieu","r":205.2,"e":290.7},{"n":"Montfermier","r":798.0,"e":498.0},{"n":"Montpezat-de-Quercy","r":696.9,"e":611.2},{"n":"Montricoux","r":743.6,"e":606.9},{"n":"Nègrepelisse","r":1782.5,"e":1585.8},{"n":"Nohic","r":443.9,"e":113.8},{"n":"Orgueil","r":413.4,"e":106.2},{"n":"Parisot","r":878.8,"e":840.3},{"n":"Perville","r":100.0,"e":76.6},{"n":"Pompignan","r":78.7,"e":89.1},{"n":"Poupas","r":82.0,"e":173.7},{"n":"Puycornet","r":59.6,"e":70.9},{"n":"Puygaillard-de-Quercy","r":681.0,"e":981.7},{"n":"Puygaillard-de-Lomagne","r":90.0,"e":13.7},{"n":"Puylagarde","r":938.0,"e":1330.4},{"n":"Puylaroque","r":90.0,"e":110.0},{"n":"Réalville","r":1495.5,"e":1232.6},{"n":"Reyniès","r":75.2,"e":182.5},{"n":"Roquecor","r":275.0,"e":500.8},{"n":"Saint-Amans-du-Pech","r":238.0,"e":34.3},{"n":"Saint-Amans-de-Pellagal","r":95.0,"e":173.2},{"n":"Saint-Antonin-Noble-Val","r":951.8,"e":976.1},{"n":"Saint-Beauzeil","r":159.0,"e":262.6},{"n":"Saint-Cirice","r":90.0,"e":21.9},{"n":"Saint-Cirq","r":652.0,"e":73.7},{"n":"Saint-Clair","r":38.0,"e":41.8},{"n":"Saint-Étienne-de-Tulmont","r":1148.4,"e":953.7},{"n":"Saint-Georges","r":99.0,"e":6.0},{"n":"Sainte-Juliette","r":365.0,"e":393.7},{"n":"Saint-Loup","r":345.3,"e":212.1},{"n":"Saint-Michel","r":755.0,"e":511.9},{"n":"Saint-Nauphary","r":1010.7,"e":1065.4},{"n":"Saint-Nazaire-de-Valentane","r":146.4,"e":93.9},{"n":"Saint-Nicolas-de-la-Grave","r":369.0,"e":392.8},{"n":"Saint-Paul-d'Espis","r":579.0,"e":191.2},{"n":"Saint-Porquier","r":85.1,"e":130.8},{"n":"Saint-Projet","r":598.8,"e":564.3},{"n":"Saint-Sardos","r":118.1,"e":126.7},{"n":"Saint-Vincent-d'Autéjac","r":1076.9,"e":979.6},{"n":"Saint-Vincent-Lespinasse","r":80.0,"e":1.4},{"n":"La Salvetat-Belmontet","r":841.5,"e":202.8},{"n":"Savenès","r":491.5,"e":676.4},{"n":"Septfonds","r":723.8,"e":1073.1},{"n":"Sérignac","r":787.2,"e":775.0},{"n":"Sistels","r":100.0,"e":18.4},{"n":"Touffailles","r":160.0,"e":146.4},{"n":"Tréjouls","r":36.3,"e":24.7},{"n":"Vaïssac","r":1624.9,"e":1264.4},{"n":"Valeilles","r":216.0,"e":47.5},{"n":"Valence","r":190.1,"e":201.2},{"n":"Varen","r":140.1,"e":731.6},{"n":"Varennes","r":725.5,"e":84.7},{"n":"Vazerac","r":490.0,"e":466.8},{"n":"Verdun-sur-Garonne","r":1911.7,"e":470.2},{"n":"Verfeil","r":679.0,"e":820.1},{"n":"Verlhac-Tescou","r":409.3,"e":401.4},{"n":"Vigueron","r":90.0,"e":22.0},{"n":"Villebrumier","r":463.1,"e":113.1},{"n":"Villemade","r":86.1,"e":83.5}];
+
+  const BETA = 0.964;
+  const XMIN = 1, XMAX = 10000;
+
+  const pts   = COMMUNES.map(c => ({ x: c.r, y: c.e, n: c.n }));
+  const yEqX  = [{ x: XMIN, y: XMIN }, { x: XMAX, y: XMAX }];
+  const yBeta = [{ x: XMIN, y: XMIN*BETA }, { x: XMAX, y: XMAX*BETA }];
+
+  // Chart.js v4 registers the logarithmic scale under the name 'logarithmic'.
+  // The UI keeps the short label "log" via data-scale, mapped on click.
+  const SCALE_MAP = { log: 'logarithmic', linear: 'linear' };
+  let scaleType = 'logarithmic';
+
+  function makeOptions(){
+    const isLog = scaleType === 'logarithmic';
+    const axis = (title) => ({
+      type: scaleType,
+      min: isLog ? 1 : 0,
+      max: 10000,
+      grid: { color: '#ECEFF3' },
+      title: { display: true, text: title, color: '#4A4A4A',
+               font: { size: 11, family: 'Inter' } },
+      ticks: {
+        font: { size: 10, family: 'JetBrains Mono' },
+        callback: v => {
+          if (!isLog) return v.toLocaleString('en-US').replace(/,/g,' ');
+          if ([1,10,100,1000,10000].includes(v)) return v.toLocaleString('en-US').replace(/,/g,' ');
+          return '';
+        }
+      }
+    });
+    return {
+      responsive: true, maintainAspectRatio: false,
+      animation: { duration: 700, easing: 'easeOutQuart' },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { usePointStyle: true, boxWidth: 10, font: { size: 11 } },
+        },
+        tooltip: {
+          backgroundColor: '#1F4E79',
+          titleFont: { weight: '600' }, bodyFont: { weight: '400' },
+          padding: 10, cornerRadius: 3, displayColors: false,
+          filter: ctx => ctx.raw && ctx.raw.n !== undefined,
+          callbacks: {
+            title: items => {
+              const p = items[0].raw;
+              return p && p.n ? p.n : '';
+            },
+            label: ctx => {
+              const p = ctx.raw;
+              if (!p || p.n === undefined) return null;
+              const ratio = p.x ? (p.y / p.x) : null;
+              return [
+                'registered Cᵣ : ' + p.x.toLocaleString('en-US').replace(/,/g,' ') + ' kWp',
+                'estimated  Cₑ : ' + p.y.toLocaleString('en-US').replace(/,/g,' ') + ' kWp',
+                'ratio Cₑ/Cᵣ  : ' + (ratio ? ratio.toFixed(2) : '—'),
+              ];
+            },
+          },
+        }
+      },
+      scales: {
+        x: axis('Registered capacity Cᵣ (kWp)  ·  RNI rooftop subset'),
+        y: axis('Estimated capacity Cₑ (kWp)  ·  Σ S/5 over commune'),
+      }
+    };
+  }
+
+  const chart = new Chart(canvas.getContext('2d'), {
+    data: {
+      datasets: [
+        { type:'line', label:'y = x',
+          data: yEqX, parsing:false, showLine:true,
+          borderColor:'#B8B8B8', borderWidth:1.2, borderDash:[5,4],
+          pointRadius:0, fill:false, tension:0 },
+        { type:'line', label:'y = β·x  (β = 0.964)',
+          data: yBeta, parsing:false, showLine:true,
+          borderColor:'#1F4E79', borderWidth:1.6,
+          pointRadius:0, fill:false, tension:0 },
+        { type:'scatter', label:'communes  (n = 161)',
+          data: pts, parsing:false,
+          pointRadius:3.5, pointHoverRadius:6,
+          backgroundColor:'rgba(46,125,50,0.55)',
+          borderColor:'#2E7D32', borderWidth:0.8 },
+      ]
+    },
+    options: makeOptions(),
+  });
+
+  // Axis-toggle (log <-> linear)
+  const tog = document.getElementById('stp-axis-toggle');
+  if (tog) {
+    tog.addEventListener('click', e => {
+      const btn = e.target.closest('button[data-scale]');
+      if (!btn) return;
+      scaleType = SCALE_MAP[btn.dataset.scale] || 'linear';
+      tog.querySelectorAll('button').forEach(b => {
+        b.setAttribute('aria-pressed', b.dataset.scale === btn.dataset.scale ? 'true' : 'false');
+      });
+      chart.options.scales = makeOptions().scales;
+      chart.update();
+    });
+  }
+  return chart;
+}
+
+// Wait for the DOM + Chart.js to be ready, then build.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', buildCompanionScatter);
+} else {
+  buildCompanionScatter();
+}
 
 </script>
 </body>
